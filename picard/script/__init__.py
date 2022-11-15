@@ -71,14 +71,20 @@ def script_function_documentation(name, fmt, functions=None, postprocessor=None)
     if functions is None:
         functions = dict(ScriptParser._function_registry)
     if name not in functions:
-        raise ScriptFunctionDocError("no such function: %s (known functions: %r)" % (name, [name for name in functions]))
+        raise ScriptFunctionDocError(
+            "no such function: %s (known functions: %r)"
+            % (name, list(functions))
+        )
+
 
     if fmt == 'html':
         return functions[name].htmldoc(postprocessor)
     elif fmt == 'markdown':
         return functions[name].markdowndoc(postprocessor)
     else:
-        raise ScriptFunctionDocError("no such documentation format: %s (known formats: html, markdown)" % fmt)
+        raise ScriptFunctionDocError(
+            f"no such documentation format: {fmt} (known formats: html, markdown)"
+        )
 
 
 def script_function_names(functions=None):
@@ -92,10 +98,9 @@ def script_function_documentation_all(fmt='markdown', pre='',
     functions = dict(ScriptParser._function_registry)
     doc_elements = []
     for name in script_function_names(functions):
-        doc_element = script_function_documentation(name, fmt,
-                                                    functions=functions,
-                                                    postprocessor=postprocessor)
-        if doc_element:
+        if doc_element := script_function_documentation(
+            name, fmt, functions=functions, postprocessor=postprocessor
+        ):
             doc_elements.append(pre + doc_element + post)
     return "\n".join(doc_elements)
 
@@ -104,9 +109,17 @@ def enabled_tagger_scripts_texts():
     """Returns an iterator over the enabled tagger scripts.
     For each script, you'll get a tuple consisting of the script name and text"""
     config = get_config()
-    if not config.setting["enable_tagger_scripts"]:
-        return []
-    return [(s_name, s_text) for _s_pos, s_name, s_enabled, s_text in config.setting["list_of_scripts"] if s_enabled and s_text]
+    return (
+        [
+            (s_name, s_text)
+            for _s_pos, s_name, s_enabled, s_text in config.setting[
+                "list_of_scripts"
+            ]
+            if s_enabled and s_text
+        ]
+        if config.setting["enable_tagger_scripts"]
+        else []
+    )
 
 
 def get_file_naming_script(settings):

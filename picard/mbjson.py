@@ -129,7 +129,7 @@ def _parse_attributes(attrs, reltype, attr_credits):
             nouns.append(attr)
     prefix = ' '.join(prefixes)
     if len(nouns) > 1:
-        result = '%s and %s' % (', '.join(nouns[:-1]), nouns[-1:][0])
+        result = f"{', '.join(nouns[:-1])} and {nouns[-1:][0]}"
     elif len(nouns) == 1:
         result = nouns[0]
     else:
@@ -138,9 +138,7 @@ def _parse_attributes(attrs, reltype, attr_credits):
 
 
 def _relation_attributes(relation):
-    if 'attributes' in relation:
-        return tuple(a for a in relation['attributes'])
-    return tuple()
+    return tuple(relation['attributes']) if 'attributes' in relation else tuple()
 
 
 def _relations_to_metadata(relations, m, instrumental=False, config=None):
@@ -153,8 +151,7 @@ def _relations_to_metadata(relations, m, instrumental=False, config=None):
             value, valuesort = _translate_artist_node(artist, config=config)
             has_translation = (value != artist['name'])
             if not has_translation and use_credited_as and 'target-credit' in relation:
-                credited_as = relation['target-credit']
-                if credited_as:
+                if credited_as := relation['target-credit']:
                     value = credited_as
             reltype = relation['type']
             attribs = _relation_attributes(relation)
@@ -163,7 +160,7 @@ def _relations_to_metadata(relations, m, instrumental=False, config=None):
                     attr_credits = relation.get('attribute-credits', {})
                 else:
                     attr_credits = {}
-                name = 'performer:' + _parse_attributes(attribs, reltype, attr_credits)
+                name = f'performer:{_parse_attributes(attribs, reltype, attr_credits)}'
             elif reltype == 'mix-DJ' and attribs:
                 if not hasattr(m, "_djmix_ars"):
                     m._djmix_ars = {}
@@ -223,9 +220,9 @@ def _translate_artist_node(node, config=None):
                         if script_id not in detected_scripts:
                             continue
                         if detected_scripts[script_id] >= script_weighting / 100:
-                            log.debug("Match" + log_text)
+                            log.debug(f"Match{log_text}")
                             return node['name'], node['sort-name']
-                    log.debug("No match" + log_text)
+                    log.debug(f"No match{log_text}")
                 else:
                     log.warning("No scripts selected for translation exception match check.")
 
@@ -347,8 +344,7 @@ def _country_from_release_event(release_event):
 def countries_from_node(node):
     countries = []
     for release_event in _release_event_iter(node):
-        country_code = _country_from_release_event(release_event)
-        if country_code:
+        if country_code := _country_from_release_event(release_event):
             countries.append(country_code)
     return sorted(countries)
 
@@ -358,8 +354,7 @@ def release_dates_and_countries_from_node(node):
     countries = []
     for release_event in _release_event_iter(node):
         dates.append(release_event['date'] or '')
-        country_code = _country_from_release_event(release_event)
-        if country_code:
+        if country_code := _country_from_release_event(release_event):
             countries.append(country_code)
     return dates, countries
 
@@ -394,7 +389,7 @@ def media_formats_from_node(node):
         count = formats_count[medium_format]
         medium_format = RELEASE_FORMATS.get(medium_format, medium_format)
         if count > 1:
-            medium_format = str(count) + "×" + medium_format
+            medium_format = f"{str(count)}×{medium_format}"
         formats.append(medium_format)
     return " + ".join(formats)
 
@@ -579,16 +574,14 @@ def add_genres_from_node(node, obj):
 
 def add_genres(node, obj):
     for tag in node:
-        key = tag['name']
-        count = tag['count']
-        if key:
+        if key := tag['name']:
+            count = tag['count']
             obj.add_genre(key, count)
 
 
 def add_user_genres(node, obj):
     for tag in node:
-        key = tag['name']
-        if key:
+        if key := tag['name']:
             obj.add_genre(key, 1)
 
 

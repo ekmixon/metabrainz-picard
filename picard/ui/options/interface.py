@@ -207,9 +207,10 @@ class InterfaceOptionsPage(OptionsPage):
 
         def fcmp(x):
             return strxfrm(x[2])
+
         for lang_code, native, translation in sorted(language_list, key=fcmp):
             if native and native != translation:
-                name = '%s (%s)' % (translation, native)
+                name = f'{translation} ({native})'
             else:
                 name = translation
             self.ui.ui_language.addItem(name, lang_code)
@@ -294,8 +295,9 @@ class InterfaceOptionsPage(OptionsPage):
 
     def starting_directory_browse(self):
         item = self.ui.starting_directory_path
-        path = QtWidgets.QFileDialog.getExistingDirectory(self, "", item.text())
-        if path:
+        if path := QtWidgets.QFileDialog.getExistingDirectory(
+            self, "", item.text()
+        ):
             path = os.path.normpath(path)
             item.setText(path)
 
@@ -324,7 +326,7 @@ class InterfaceOptionsPage(OptionsPage):
 
     def _added_actions(self):
         actions = self._all_list_items()
-        return set(action for action in actions if action != 'separator')
+        return {action for action in actions if action != 'separator'}
 
     def populate_action_list(self):
         self.ui.toolbar_layout_list.clear()

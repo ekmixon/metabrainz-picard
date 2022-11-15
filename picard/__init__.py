@@ -38,22 +38,18 @@ PICARD_ORG_NAME = "MusicBrainz"
 PICARD_APP_NAME = "Picard"
 PICARD_DISPLAY_NAME = "MusicBrainz Picard"
 PICARD_APP_ID = "org.musicbrainz.Picard"
-PICARD_DESKTOP_NAME = PICARD_APP_ID + ".desktop"
+PICARD_DESKTOP_NAME = f"{PICARD_APP_ID}.desktop"
 PICARD_VERSION = Version(2, 9, 0, 'dev', 1)
-
-
-# optional build version
-# it should be in the form '<platform>_<YYMMDDHHMMSS>'
-# ie. win32_20140415091256
-PICARD_BUILD_VERSION_STR = ""
 
 
 PICARD_VERSION_STR = PICARD_VERSION.to_string()
 PICARD_VERSION_STR_SHORT = PICARD_VERSION.to_string(short=True)
-if PICARD_BUILD_VERSION_STR:
-    __version__ = "%s+%s" % (PICARD_VERSION_STR, PICARD_BUILD_VERSION_STR)
-    PICARD_FANCY_VERSION_STR = "%s (%s)" % (PICARD_VERSION_STR_SHORT,
-                                            PICARD_BUILD_VERSION_STR)
+if PICARD_BUILD_VERSION_STR := "":
+    __version__ = f"{PICARD_VERSION_STR}+{PICARD_BUILD_VERSION_STR}"
+    PICARD_FANCY_VERSION_STR = (
+        f"{PICARD_VERSION_STR_SHORT} ({PICARD_BUILD_VERSION_STR})"
+    )
+
 else:
     __version__ = PICARD_VERSION_STR_SHORT
     PICARD_FANCY_VERSION_STR = PICARD_VERSION_STR_SHORT

@@ -67,12 +67,12 @@ class CoverArtProviderMetaClass(type):
     It is recommended to use those in place of NAME and TITLE that might not be defined
     """
     @property
-    def name(cls):
-        return getattr(cls, 'NAME', cls.__name__)
+    def name(self):
+        return getattr(self, 'NAME', self.__name__)
 
     @property
-    def title(cls):
-        return getattr(cls, 'TITLE', cls.name)
+    def title(self):
+        return getattr(self, 'TITLE', self.name)
 
 
 class CoverArtProvider(metaclass=CoverArtProviderMetaClass):
@@ -128,8 +128,10 @@ class CoverArtProvider(metaclass=CoverArtProviderMetaClass):
         try:
             if 'relations' in self.release:
                 for relation in self.release['relations']:
-                    if relation['target-type'] == 'url':
-                        if relation['type'] in relation_types:
-                            func(relation['url']['resource'])
+                    if (
+                        relation['target-type'] == 'url'
+                        and relation['type'] in relation_types
+                    ):
+                        func(relation['url']['resource'])
         except AttributeError:
             self.error(traceback.format_exc())

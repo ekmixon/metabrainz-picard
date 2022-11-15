@@ -84,8 +84,7 @@ class CoverArtProviderLocal(CoverArtProvider):
 
     def queue_images(self):
         config = get_config()
-        regex = config.setting['local_cover_regex']
-        if regex:
+        if regex := config.setting['local_cover_regex']:
             _match_re = re.compile(regex, re.IGNORECASE)
             dirs_done = set()
 

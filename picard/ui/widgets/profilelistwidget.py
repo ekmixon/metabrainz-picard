@@ -38,8 +38,7 @@ from picard.ui import HashableListWidgetItem
 class ProfileListWidget(QtWidgets.QListWidget):
 
     def contextMenuEvent(self, event):
-        item = self.itemAt(event.x(), event.y())
-        if item:
+        if item := self.itemAt(event.x(), event.y()):
             menu = QtWidgets.QMenu(self)
             rename_action = QtWidgets.QAction(_("Rename profile"), self)
             rename_action.triggered.connect(partial(self.editItem, item))
@@ -73,8 +72,7 @@ class ProfileListWidget(QtWidgets.QListWidget):
             | QtCore.QItemSelectionModel.SelectionFlag.SelectCurrent)
 
     def remove_selected_profile(self):
-        items = self.selectedItems()
-        if items:
+        if items := self.selectedItems():
             self.remove_profile(items[0])
 
     def remove_profile(self, item):

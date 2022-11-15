@@ -144,8 +144,7 @@ class TableBasedDialog(PicardDialog):
     def add_widget_to_center_layout(self, widget):
         """Update center widget with new child. If child widget exists,
         schedule it for deletion."""
-        widget_item = self.center_layout.takeAt(0)
-        if widget_item:
+        if widget_item := self.center_layout.takeAt(0):
             current_widget = widget_item.widget()
             current_widget.hide()
             self.center_layout.removeWidget(current_widget)
@@ -178,7 +177,7 @@ class TableBasedDialog(PicardDialog):
                 int(highlight_color.lightness() * .6),
                 highlight_color.alpha())
         highlight_brush = QtGui.QBrush(highlight_color)
-        for column in range(0, model.columnCount()):
+        for column in range(model.columnCount()):
             index = model.index(row, column)
             model.setData(index, highlight_brush, QtCore.Qt.ItemDataRole.BackgroundRole)
 
@@ -210,8 +209,7 @@ class TableBasedDialog(PicardDialog):
     def restore_table_header_state(self):
         header = self.table.horizontalHeader()
         config = get_config()
-        state = config.persist[self.dialog_header_state]
-        if state:
+        if state := config.persist[self.dialog_header_state]:
             header.restoreState(state)
         header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Interactive)
         log.debug("restore_state: %s", self.dialog_header_state)

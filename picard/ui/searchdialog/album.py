@@ -77,8 +77,7 @@ class CoverWidget(QtWidgets.QWidget):
     def set_pixmap(self, pixmap):
         if not self.layout:
             return
-        wid = self.layout.takeAt(0)
-        if wid:
+        if wid := self.layout.takeAt(0):
             wid.widget().deleteLater()
         cover_label = QtWidgets.QLabel(self)
         pixmap = pixmap.scaled(self.__size, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
@@ -116,10 +115,7 @@ class CoverCell:
         table.setCellWidget(row, column, widget)
 
     def is_visible(self):
-        if self.widget:
-            return not self.widget.visibleRegion().isEmpty()
-        else:
-            return False
+        return not self.widget.visibleRegion().isEmpty() if self.widget else False
 
     def set_pixmap(self, pixmap):
         if self.widget:
@@ -248,7 +244,7 @@ class AlbumSearchDialog(SearchDialog):
         if not cell.is_visible():
             return
         cell.fetched = True
-        caa_path = "/release/%s" % cell.release["musicbrainz_albumid"]
+        caa_path = f'/release/{cell.release["musicbrainz_albumid"]}'
         cell.fetch_task = self.tagger.webservice.get(
             CAA_HOST,
             CAA_PORT,
@@ -333,8 +329,7 @@ class AlbumSearchDialog(SearchDialog):
                 media = node['media']
                 release["format"] = media_formats_from_node(media)
                 release["tracks"] = node['track-count']
-            countries = countries_from_node(node)
-            if countries:
+            if countries := countries_from_node(node):
                 release["country"] = ", ".join(countries)
             self.search_results.append(release)
 

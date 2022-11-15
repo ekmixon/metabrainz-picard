@@ -75,11 +75,10 @@ class Id3Encoding(IntEnum):
     UTF16BE = 2
     UTF8 = 3
 
-    def from_config(id3v2_encoding):
-        return {
-            'utf-8': Id3Encoding.UTF8,
-            'utf-16': Id3Encoding.UTF16
-        }.get(id3v2_encoding, Id3Encoding.LATIN1)
+    def from_config(self):
+        return {'utf-8': Id3Encoding.UTF8, 'utf-16': Id3Encoding.UTF16}.get(
+            self, Id3Encoding.LATIN1
+        )
 
 
 def id3text(text, encoding):
@@ -267,9 +266,9 @@ class ID3File(File):
                     for text in frame.text:
                         if text:
                             if frame.lang == 'eng':
-                                name = '%s:%s' % (name, frame.desc)
+                                name = f'{name}:{frame.desc}'
                             else:
-                                name = '%s:%s:%s' % (name, frame.lang, frame.desc)
+                                name = f'{name}:{frame.lang}:{frame.desc}'
                             metadata.add(name, text)
                 else:
                     metadata.add(name, frame)
@@ -283,7 +282,7 @@ class ID3File(File):
                     if role == 'performer':
                         role = ''
                     if role:
-                        metadata.add('performer:%s' % role, name)
+                        metadata.add(f'performer:{role}', name)
                     else:
                         metadata.add('performer', name)
             elif frameid == "TIPL":
@@ -296,7 +295,7 @@ class ID3File(File):
                         if role == 'performer':
                             role = ''
                         if role:
-                            metadata.add('performer:%s' % role, name)
+                            metadata.add(f'performer:{role}', name)
                         else:
                             metadata.add('performer', name)
             elif frameid == 'TXXX':
@@ -319,19 +318,18 @@ class ID3File(File):
                     # is in __rtranslate or __rtranslate_freetext, but not
                     # both. (Being in both implies we support reading it both
                     # ways.) Currently, the only tag in both is license.
-                    name = '~id3:TXXX:' + name
+                    name = f'~id3:TXXX:{name}'
                 for text in frame.text:
                     metadata.add(name, text)
             elif frameid == 'USLT':
                 name = 'lyrics'
                 if frame.desc:
-                    name += ':%s' % frame.desc
+                    name += f':{frame.desc}'
                 metadata.add(name, frame.text)
             elif frameid == 'UFID' and frame.owner == 'http://musicbrainz.org':
                 metadata['musicbrainz_recordingid'] = frame.data.decode('ascii', 'ignore')
             elif frameid in self.__tag_re_parse.keys():
-                m = self.__tag_re_parse[frameid].search(frame.text[0])
-                if m:
+                if m := self.__tag_re_parse[frameid].search(frame.text[0]):
                     for name, value in m.groupdict().items():
                         if value is not None:
                             metadata[name] = value
@@ -359,8 +357,7 @@ class ID3File(File):
                     metadata.add('~rating', rating)
 
         if 'date' in metadata:
-            sanitized = sanitize_date(metadata.getall('date')[0])
-            if sanitized:
+            if sanitized := sanitize_date(metadata.getall('date')[0]):
                 metadata['date'] = sanitized
 
         self._info(metadata, file)

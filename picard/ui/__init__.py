@@ -68,10 +68,10 @@ class PreserveGeometry:
             self.finished.connect(self.save_geometry)
 
     def opt_name(self):
-        return 'geometry_' + self.__class__.__name__
+        return f'geometry_{self.__class__.__name__}'
 
     def splitters_name(self):
-        return 'splitters_' + self.__class__.__name__
+        return f'splitters_{self.__class__.__name__}'
 
     def _get_lineage(self, widget):
         """Try to develop a unique lineage / ancestry to identify the specified widget.
@@ -80,11 +80,10 @@ class PreserveGeometry:
         Returns:
             generator: full ancestry for the specified widget.
         """
-        parent = widget.parent()
-        if parent:
+        if parent := widget.parent():
             yield from self._get_lineage(parent)
 
-        yield widget.objectName() if widget.objectName() else widget.__class__.__name__
+        yield widget.objectName() or widget.__class__.__name__
 
     def _get_name(self, widget):
         """Return the name of the widget.
@@ -98,7 +97,7 @@ class PreserveGeometry:
         name = widget.objectName()
         if not name:
             name = '.'.join(self._get_lineage(widget))
-            log.debug("Splitter does not have objectName(): %s" % name)
+            log.debug(f"Splitter does not have objectName(): {name}")
         return name
 
     @property
@@ -153,10 +152,7 @@ class SingletonDialog:
         instance = cls.get_instance(*args, **kwargs)
         # Get the current parent
         if hasattr(instance, 'parent'):
-            if callable(instance.parent):
-                parent = instance.parent()
-            else:
-                parent = instance.parent
+            parent = instance.parent() if callable(instance.parent) else instance.parent
         else:
             parent = None
         # Update parent if changed

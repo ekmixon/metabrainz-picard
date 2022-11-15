@@ -116,8 +116,7 @@ def weights_from_release_type_scores(parts, release, release_type_scores,
 def weights_from_preferred_countries(parts, release,
                                      preferred_countries,
                                      weight):
-    total_countries = len(preferred_countries)
-    if total_countries:
+    if total_countries := len(preferred_countries):
         score = 0.0
         if "country" in release:
             try:
@@ -176,7 +175,7 @@ class Metadata(MutableMapping):
     multi_valued_joiner = MULTI_VALUED_JOINER
 
     def __init__(self, *args, deleted_tags=None, images=None, length=None, **kwargs):
-        self._store = dict()
+        self._store = {}
         self.deleted_tags = set()
         self.length = 0
         self.images = ImageList()
@@ -285,9 +284,9 @@ class Metadata(MutableMapping):
         date_match_factor = 0.0
         if "date" in weights:
             if "date" in release and release['date'] != '':
-                release_date = release['date']
                 if "date" in self:
                     metadata_date = self['date']
+                    release_date = release['date']
                     if release_date == metadata_date:
                         # release has a date and it matches what our metadata had exactly.
                         date_match_factor = self.__date_match_factors['exact']
@@ -360,10 +359,7 @@ class Metadata(MutableMapping):
             score = self.length_score(a, b)
             parts.append((score, weights["length"]))
 
-        releases = []
-        if "releases" in track:
-            releases = track['releases']
-
+        releases = track['releases'] if "releases" in track else []
         search_score = get_score(track)
         if not releases:
             sim = linear_combination_of_weights(parts) * search_score
@@ -390,7 +386,7 @@ class Metadata(MutableMapping):
 
     def update(self, *args, **kwargs):
         one_arg = len(args) == 1
-        if one_arg and (isinstance(args[0], self.__class__) or isinstance(args[0], MultiMetadataProxy)):
+        if one_arg and (isinstance(args[0], (self.__class__, MultiMetadataProxy))):
             self._update_from_metadata(args[0])
         elif one_arg and isinstance(args[0], MutableMapping):
             # update from MutableMapping (ie. dict)
@@ -446,8 +442,7 @@ class Metadata(MutableMapping):
         return self._store[self.normalize_tag(name)]
 
     def get(self, key, default=None):
-        values = self._store.get(self.normalize_tag(key), None)
-        if values:
+        if values := self._store.get(self.normalize_tag(key), None):
             return self.multi_valued_joiner.join(values)
         else:
             return default
@@ -586,12 +581,8 @@ class MultiMetadataProxy:
     def __getattr__(self, name):
         if name in self.WRITE_METHODS:
             return partial(self.__write, name)
-        else:
-            attribute = self.combined_metadata.__getattribute__(name)
-            if callable(attribute):
-                return partial(self.__read, name)
-            else:
-                return attribute
+        attribute = self.combined_metadata.__getattribute__(name)
+        return partial(self.__read, name) if callable(attribute) else attribute
 
     def __setattr__(self, name, value):
         if name in {'metadata', 'combined_metadata'}:

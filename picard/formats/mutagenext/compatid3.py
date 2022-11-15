@@ -45,8 +45,7 @@ class XSOP(TextFrame):
     pass
 
 
-known_frames = dict(Frames)
-known_frames.update(dict(Frames_2_2))
+known_frames = dict(Frames) | Frames_2_2
 known_frames["GRP1"] = GRP1  # Available since mutagen >= 1.38
 known_frames["XSOP"] = XSOP
 

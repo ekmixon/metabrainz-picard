@@ -121,10 +121,7 @@ class Item(object):
         Returns:
             A string with the cover art image count, or empty string if not applicable
         """
-        if not self.can_show_coverart:
-            return ''
-
-        return str(len(self._images))
+        return str(len(self._images)) if self.can_show_coverart else ''
 
     def cover_art_description_detailed(self):
         """Return  a detailed text about the images and whether they are the same across
@@ -159,9 +156,12 @@ class FileListItem(Item):
         self.update_metadata_images_enabled = enabled
 
     def update_metadata_images(self):
-        if self.update_metadata_images_enabled and self.can_show_coverart:
-            if update_metadata_images(self):
-                self.metadata_images_changed.emit()
+        if (
+            self.update_metadata_images_enabled
+            and self.can_show_coverart
+            and update_metadata_images(self)
+        ):
+            self.metadata_images_changed.emit()
 
     def keep_original_images(self):
         self.enable_update_metadata_images(False)

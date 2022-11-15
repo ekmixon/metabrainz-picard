@@ -73,7 +73,7 @@ class ScriptsMenu(QtWidgets.QMenu):
         for obj in objs:
             if hasattr(obj, 'metadata') and not getattr(obj, 'special', False):
                 yield obj
-            if isinstance(obj, Cluster) or isinstance(obj, Track):
+            if isinstance(obj, (Cluster, Track)):
                 yield from self._iter_metadata_objects(obj.iterfiles())
             elif isinstance(obj, ClusterList):
                 yield from self._iter_metadata_objects(obj)

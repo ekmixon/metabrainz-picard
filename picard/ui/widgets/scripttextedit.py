@@ -144,7 +144,7 @@ class TaggerScriptSyntaxHighlighter(QtGui.QSyntaxHighlighter):
 
         # Ignore everything if we're already in a noop function
         index = find_regex_index(self.noop_re, text) if self.previousBlockState() <= 0 else 0
-        open_brackets = self.previousBlockState() if self.previousBlockState() > 0 else 0
+        open_brackets = max(self.previousBlockState(), 0)
         text_length = len(text)
         while index >= 0:
             next_index = find_regex_index(self.bracket_re, text, index)
@@ -186,7 +186,7 @@ class ScriptCompleter(QCompleter):
 
     @property
     def choices(self):
-        yield from {'$' + name for name in script_function_names()}
+        yield from {f'${name}' for name in script_function_names()}
         yield from {'%' + name.replace('~', '_') + '%' for name in self.all_tags}
 
     @property
@@ -485,10 +485,13 @@ class ScriptTextEdit(QTextEdit):
         return tc
 
     def keyPressEvent(self, event):
-        if self.completer.popup().isVisible():
-            if event.key() in {Qt.Key.Key_Tab, Qt.Key.Key_Return, Qt.Key.Key_Enter}:
-                self.completer.activated.emit(self.completer.get_selected())
-                return
+        if self.completer.popup().isVisible() and event.key() in {
+            Qt.Key.Key_Tab,
+            Qt.Key.Key_Return,
+            Qt.Key.Key_Enter,
+        }:
+            self.completer.activated.emit(self.completer.get_selected())
+            return
 
         super().keyPressEvent(event)
         self.handle_autocomplete(event)

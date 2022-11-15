@@ -110,16 +110,24 @@ class TagCounter(dict):
 
         if tag in self.different:
             return (ngettext("(different across %d item)", "(different across %d items)", count) % count, True)
-        else:
-            if tag == "~length":
-                msg = format_time(self.get(tag, 0))
-            else:
-                msg = MULTI_VALUED_JOINER.join(self[tag])
+        msg = (
+            format_time(self.get(tag, 0))
+            if tag == "~length"
+            else MULTI_VALUED_JOINER.join(self[tag])
+        )
 
-            if count > 0 and missing > 0:
-                return (msg + " " + (ngettext("(missing from %d item)", "(missing from %d items)", missing) % missing), True)
-            else:
-                return (msg, False)
+        if count > 0 and missing > 0:
+            return (
+                f"{msg} "
+                + ngettext(
+                    "(missing from %d item)", "(missing from %d items)", missing
+                )
+                % missing,
+                True,
+            )
+
+        else:
+            return (msg, False)
 
 
 class TagDiff(object):
@@ -157,7 +165,7 @@ class TagDiff(object):
             removable = True
         elif orig_values and new_values and self.__tag_ne(tag, orig_values, new_values):
             self.status[tag] |= TagStatus.CHANGED
-        elif not (orig_values or new_values or tag in top_tags):
+        elif not orig_values and tag not in top_tags:
             self.status[tag] |= TagStatus.EMPTY
         else:
             self.status[tag] |= TagStatus.NOCHANGE
@@ -170,11 +178,19 @@ class TagDiff(object):
 
     def tag_status(self, tag):
         status = self.status[tag]
-        for s in (TagStatus.CHANGED, TagStatus.ADDED,
-                  TagStatus.REMOVED, TagStatus.EMPTY):
-            if status & s == s:
-                return s
-        return TagStatus.NOCHANGE
+        return next(
+            (
+                s
+                for s in (
+                    TagStatus.CHANGED,
+                    TagStatus.ADDED,
+                    TagStatus.REMOVED,
+                    TagStatus.EMPTY,
+                )
+                if status & s == s
+            ),
+            TagStatus.NOCHANGE,
+        )
 
 
 class TableTagEditorDelegate(TagEditorDelegate):
@@ -266,7 +282,7 @@ class MetadataBox(QtWidgets.QTableWidget):
 
     def lookup_tags(self):
         lookup = self.get_file_lookup()
-        LOOKUP_TAGS = {
+        return {
             "musicbrainz_recordingid": lookup.recording_lookup,
             "musicbrainz_trackid": lookup.track_lookup,
             "musicbrainz_albumid": lookup.album_lookup,
@@ -275,9 +291,8 @@ class MetadataBox(QtWidgets.QTableWidget):
             "musicbrainz_albumartistid": lookup.artist_lookup,
             "musicbrainz_releasegroupid": lookup.release_group_lookup,
             "musicbrainz_discid": lookup.discid_lookup,
-            "acoustid_id": lookup.acoust_lookup
+            "acoustid_id": lookup.acoust_lookup,
         }
-        return LOOKUP_TAGS
 
     def open_link(self, values, tag):
         lookup = self.lookup_tags()
@@ -313,8 +328,7 @@ class MetadataBox(QtWidgets.QTableWidget):
             super().keyPressEvent(event)
 
     def copy_value(self):
-        item = self.currentItem()
-        if item:
+        if item := self.currentItem():
             column = item.column()
             tag = self.tag_diff.tag_names[item.row()]
             value = None
@@ -329,8 +343,7 @@ class MetadataBox(QtWidgets.QTableWidget):
                 self.clipboard = value
 
     def paste_value(self):
-        item = self.currentItem()
-        if item:
+        if item := self.currentItem():
             column = item.column()
             tag = self.tag_diff.tag_names[item.row()]
             if column == self.COLUMN_NEW and self.tag_is_editable(tag):
@@ -338,8 +351,7 @@ class MetadataBox(QtWidgets.QTableWidget):
                 self.update()
 
     def update_clipboard(self):
-        clipboard = self.tagger.clipboard().text().split(MULTI_VALUED_JOINER)
-        if clipboard:
+        if clipboard := self.tagger.clipboard().text().split(MULTI_VALUED_JOINER):
             self.clipboard = clipboard
 
     def closeEditor(self, editor, hint):
@@ -387,23 +399,26 @@ class MetadataBox(QtWidgets.QTableWidget):
                     menu.addAction(remove_from_preserved_tags_action)
             removals = []
             useorigs = []
-            item = self.currentItem()
-            if item:
+            if item := self.currentItem():
                 column = item.column()
                 for tag in tags:
-                    if tag in self.lookup_tags().keys():
-                        if (column == self.COLUMN_ORIG or column == self.COLUMN_NEW) and single_tag and item.text():
-                            if column == self.COLUMN_ORIG:
-                                values = self.tag_diff.orig[tag]
-                            else:
-                                values = self.tag_diff.new[tag]
-                            lookup_action = QtWidgets.QAction(_("Lookup in &Browser"), self.parent)
-                            lookup_action.triggered.connect(partial(self.open_link, values, tag))
-                            menu.addAction(lookup_action)
+                    if (
+                        tag in self.lookup_tags().keys()
+                        and column in [self.COLUMN_ORIG, self.COLUMN_NEW]
+                        and single_tag
+                        and item.text()
+                    ):
+                        if column == self.COLUMN_ORIG:
+                            values = self.tag_diff.orig[tag]
+                        else:
+                            values = self.tag_diff.new[tag]
+                        lookup_action = QtWidgets.QAction(_("Lookup in &Browser"), self.parent)
+                        lookup_action.triggered.connect(partial(self.open_link, values, tag))
+                        menu.addAction(lookup_action)
                     if self.tag_is_removable(tag):
                         removals.append(partial(self.remove_tag, tag))
                     status = self.tag_diff.status[tag] & TagStatus.CHANGED
-                    if status == TagStatus.CHANGED or status == TagStatus.REMOVED:
+                    if status in [TagStatus.CHANGED, TagStatus.REMOVED]:
                         file_tracks = []
                         track_albums = set()
                         for file in self.files:
@@ -503,8 +518,7 @@ class MetadataBox(QtWidgets.QTableWidget):
         return self.tag_diff.status[tag] & TagStatus.READONLY == 0
 
     def selected_tags(self, filter_func=None):
-        tags = set(self.tag_diff.tag_names[item.row()]
-                   for item in self.selectedItems())
+        tags = {self.tag_diff.tag_names[item.row()] for item in self.selectedItems()}
         if filter_func:
             tags = filter(filter_func, tags)
         return list(tags)
@@ -553,25 +567,20 @@ class MetadataBox(QtWidgets.QTableWidget):
         tracks = self.tracks
         self.selection_mutex.unlock()
 
-        if not (files or tracks):
+        if not files and not tracks:
             return None
 
         if new_selection or drop_album_caches:
             self._single_file_album = len({file.metadata["album"] for file in files}) == 1
             self._single_track_album = len({track.metadata["album"] for track in tracks}) == 1
 
-        while not new_selection:  # Just an if with multiple exit points
-            # If we are dealing with the same selection
-            # skip updates unless it we are dealing with a single file/track
-            if len(files) == 1:
-                break
-            if len(tracks) == 1:
-                break
-            # Or if we are dealing with a single cluster/album
-            if self._single_file_album:
-                break
-            if self._single_track_album:
-                break
+        while (
+            not new_selection
+            and len(files) != 1
+            and len(tracks) != 1
+            and not self._single_file_album
+            and not self._single_track_album
+        ):
             return self.tag_diff
 
         self.colors = {

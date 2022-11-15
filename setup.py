@@ -79,8 +79,8 @@ if sys.version_info < (3, 7):
     sys.exit("ERROR: You need Python 3.7 or higher to use Picard.")
 
 PACKAGE_NAME = "picard"
-APPDATA_FILE = PICARD_APP_ID + '.appdata.xml'
-APPDATA_FILE_TEMPLATE = APPDATA_FILE + '.in'
+APPDATA_FILE = f'{PICARD_APP_ID}.appdata.xml'
+APPDATA_FILE_TEMPLATE = f'{APPDATA_FILE}.in'
 
 ext_modules = [
     Extension('picard.util._astrcmp', sources=['picard/util/_astrcmp.c']),
@@ -97,9 +97,11 @@ def newer(source, target):
     """
     if not os.path.exists(source):
         raise FileNotFoundError('file "%s" does not exist' % os.path.abspath(source))
-    if not os.path.exists(target):
-        return True
-    return os.path.getmtime(source) > os.path.getmtime(target)
+    return (
+        os.path.getmtime(source) > os.path.getmtime(target)
+        if os.path.exists(target)
+        else True
+    )
 
 
 class picard_test(Command):
@@ -130,7 +132,7 @@ class picard_test(Command):
             modules = os.path.splitext(filename)[0].split(os.sep)
             name = '.'.join(modules[1:])
             if not self.tests or name in self.tests:
-                names.append('test.' + name)
+                names.append(f'test.{name}')
 
         tests = unittest.defaultTestLoader.loadTestsFromNames(names)
         t = unittest.TextTestRunner(verbosity=self.verbosity)
@@ -160,7 +162,7 @@ class picard_build_locales(Command):
                 path = os.path.join('locale', locale, 'LC_MESSAGES')
             else:
                 path = os.path.join(self.build_dir, locale, 'LC_MESSAGES')
-            mo = os.path.join(path, '%s.mo' % domain)
+            mo = os.path.join(path, f'{domain}.mo')
             self.mkpath(path)
             self.spawn(['msgfmt', '-o', mo, po])
 
@@ -281,9 +283,9 @@ class picard_build(build):
         params = {'localedir': self.localedir, 'autoupdate': not self.disable_autoupdate}
         generate_file('tagger.py.in', 'tagger.py', params)
         make_executable('tagger.py')
-        generate_file('scripts/picard.in', 'scripts/' + PACKAGE_NAME, params)
+        generate_file('scripts/picard.in', f'scripts/{PACKAGE_NAME}', params)
         if sys.platform == 'win32':
-            file_version = PICARD_VERSION[0:3] + (self.build_number,)
+            file_version = PICARD_VERSION[:3] + (self.build_number,)
             file_version_str = '.'.join(str(v) for v in file_version)
 
             installer_args = {
@@ -303,20 +305,27 @@ class picard_build(build):
 
             default_publisher = 'CN=Metabrainz Foundation Inc., O=Metabrainz Foundation Inc., L=San Luis Obispo, S=California, C=US'
             store_version = (PICARD_VERSION.major, PICARD_VERSION.minor, PICARD_VERSION.patch * 10000 + self.build_number, 0)
-            generate_file('appxmanifest.xml.in', 'appxmanifest.xml', {
-                'app-id': "MetaBrainzFoundationInc." + PICARD_APP_ID,
-                'display-name': PICARD_DISPLAY_NAME,
-                'short-name': PICARD_APP_NAME,
-                'publisher': os.environ.get('PICARD_APPX_PUBLISHER', default_publisher),
-                'version': '.'.join(str(v) for v in store_version),
-            })
+            generate_file(
+                'appxmanifest.xml.in',
+                'appxmanifest.xml',
+                {
+                    'app-id': f"MetaBrainzFoundationInc.{PICARD_APP_ID}",
+                    'display-name': PICARD_DISPLAY_NAME,
+                    'short-name': PICARD_APP_NAME,
+                    'publisher': os.environ.get(
+                        'PICARD_APPX_PUBLISHER', default_publisher
+                    ),
+                    'version': '.'.join(str(v) for v in store_version),
+                },
+            )
+
         elif sys.platform not in {'darwin', 'haiku1', 'win32'}:
             self.run_command('build_appdata')
         super().run()
 
 
 def py_from_ui(uifile):
-    return "ui_%s.py" % os.path.splitext(os.path.basename(uifile))[0]
+    return f"ui_{os.path.splitext(os.path.basename(uifile))[0]}.py"
 
 
 def py_from_ui_with_defaultdir(uifile):
@@ -338,30 +347,30 @@ class picard_build_ui(Command):
         self.files = []
 
     def finalize_options(self):
-        if self.files:
-            files = []
-            for f in self.files.split(","):
-                head, tail = os.path.split(f)
-                m = re.match(r'(?:ui_)?([^.]+)', tail)
-                if m:
-                    name = m.group(1)
-                else:
-                    log.warn('ignoring %r (cannot extract base name)' % f)
-                    continue
-                uiname = name + '.ui'
-                uifile = os.path.join(head, uiname)
+        if not self.files:
+            return
+        files = []
+        for f in self.files.split(","):
+            head, tail = os.path.split(f)
+            if m := re.match(r'(?:ui_)?([^.]+)', tail):
+                name = m[1]
+            else:
+                log.warn('ignoring %r (cannot extract base name)' % f)
+                continue
+            uiname = f'{name}.ui'
+            uifile = os.path.join(head, uiname)
+            if os.path.isfile(uifile):
+                pyfile = os.path.join(os.path.dirname(uifile),
+                                      py_from_ui(uifile))
+                files.append((uifile, pyfile))
+            else:
+                uifile = os.path.join('ui', uiname)
                 if os.path.isfile(uifile):
-                    pyfile = os.path.join(os.path.dirname(uifile),
-                                          py_from_ui(uifile))
-                    files.append((uifile, pyfile))
+                    files.append((uifile,
+                                  py_from_ui_with_defaultdir(uifile)))
                 else:
-                    uifile = os.path.join('ui', uiname)
-                    if os.path.isfile(uifile):
-                        files.append((uifile,
-                                      py_from_ui_with_defaultdir(uifile)))
-                    else:
-                        log.warn('ignoring %r' % f)
-            self.files = files
+                    log.warn('ignoring %r' % f)
+        self.files = files
 
     def run(self):
         from PyQt5 import uic
@@ -385,9 +394,8 @@ class picard_build_ui(Command):
             for r in list(_translate_re):
                 source = r.sub(r'_(\1)', source)
                 source = rc.sub(comment, source)
-            f = open(pyfile, "w")
-            f.write(source)
-            f.close()
+            with open(pyfile, "w") as f:
+                f.write(source)
 
         if self.files:
             for uifile, pyfile in self.files:
@@ -441,12 +449,18 @@ class picard_build_appdata(Command):
 
     def run(self):
         with tempfile.NamedTemporaryFile(suffix=APPDATA_FILE) as tmp_file:
-            self.spawn([
-                'msgfmt', '--xml',
-                '--template=%s' % APPDATA_FILE_TEMPLATE,
-                '-d', 'po/appstream',
-                '-o', tmp_file.name,
-            ])
+            self.spawn(
+                [
+                    'msgfmt',
+                    '--xml',
+                    f'--template={APPDATA_FILE_TEMPLATE}',
+                    '-d',
+                    'po/appstream',
+                    '-o',
+                    tmp_file.name,
+                ]
+            )
+
             self.add_release_list(tmp_file.name)
 
     def add_release_list(self, source_file):
@@ -606,11 +620,11 @@ class picard_update_constants(Command):
             ]
             self.spawn(txpull_cmd)
 
-        countries = dict()
+        countries = {}
         countries_potfile = os.path.join('po', 'countries', 'countries.pot')
         isocode_comment = 'iso.code:'
         with open(countries_potfile, 'rb') as f:
-            log.info('Parsing %s' % countries_potfile)
+            log.info(f'Parsing {countries_potfile}')
             po = pofile.read_po(f)
             for message in po:
                 if not message.id or not isinstance(message.id, str):
@@ -624,7 +638,7 @@ class picard_update_constants(Command):
             else:
                 sys.exit('Failed to extract any country code/name !')
 
-        attributes = dict()
+        attributes = {}
         attributes_potfile = os.path.join('po', 'attributes', 'attributes.pot')
         extract_attributes = (
             'DB:cover_art_archive.art_type/name',
@@ -634,7 +648,7 @@ class picard_update_constants(Command):
             'DB:release_status/name',
         )
         with open(attributes_potfile, 'rb') as f:
-            log.info('Parsing %s' % attributes_potfile)
+            log.info(f'Parsing {attributes_potfile}')
             po = pofile.read_po(f)
             for message in po:
                 if not message.id or not isinstance(message.id, str):
@@ -707,7 +721,10 @@ class picard_patch_version(Command):
         regex = re.compile(r'^PICARD_BUILD_VERSION_STR\s*=.*$', re.MULTILINE)
         with open(filename, 'r+b') as f:
             source = (f.read()).decode()
-            build = self.platform + '.' + datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
+            build = f'{self.platform}.' + datetime.datetime.utcnow().strftime(
+                '%Y%m%d%H%M%S'
+            )
+
             patched_source = regex.sub('PICARD_BUILD_VERSION_STR = "%s"' % build, source).encode()
             f.seek(0)
             f.write(patched_source)
@@ -716,11 +733,7 @@ class picard_patch_version(Command):
 
 def cflags_to_include_dirs(cflags):
     cflags = cflags.split()
-    include_dirs = []
-    for cflag in cflags:
-        if cflag.startswith('-I'):
-            include_dirs.append(cflag[2:])
-    return include_dirs
+    return [cflag[2:] for cflag in cflags if cflag.startswith('-I')]
 
 
 def _picard_get_locale_files():
@@ -751,9 +764,11 @@ def _explode_path(path):
 
 def _picard_packages():
     """Build a tuple containing each module under picard/"""
-    packages = []
-    for subdir, dirs, files in os.walk("picard"):
-        packages.append(".".join(_explode_path(subdir)))
+    packages = [
+        ".".join(_explode_path(subdir))
+        for subdir, dirs, files in os.walk("picard")
+    ]
+
     return tuple(sorted(packages))
 
 
@@ -798,7 +813,7 @@ args = {
         'regen_pot_file': picard_regen_pot_file,
         'patch_version': picard_patch_version,
     },
-    'scripts': ['scripts/' + PACKAGE_NAME],
+    'scripts': [f'scripts/{PACKAGE_NAME}'],
     'install_requires': _get_requirements(),
     'python_requires': '~=3.7',
     'classifiers': [
@@ -819,7 +834,7 @@ args = {
         'Topic :: Multimedia :: Sound/Audio',
         'Topic :: Multimedia :: Sound/Audio :: Analysis',
         'Intended Audience :: End Users/Desktop',
-    ]
+    ],
 }
 
 
@@ -843,7 +858,13 @@ def find_file_in_path(filename):
 
 if sys.platform not in {'darwin', 'haiku1', 'win32'}:
     args['data_files'].append(('share/applications', [PICARD_DESKTOP_NAME]))
-    args['data_files'].append(('share/icons/hicolor/scalable/apps', ['resources/%s.svg' % PICARD_APP_ID]))
+    args['data_files'].append(
+        (
+            'share/icons/hicolor/scalable/apps',
+            [f'resources/{PICARD_APP_ID}.svg'],
+        )
+    )
+
     for size in (16, 24, 32, 48, 128, 256):
         args['data_files'].append((
             'share/icons/hicolor/{size}x{size}/apps'.format(size=size),

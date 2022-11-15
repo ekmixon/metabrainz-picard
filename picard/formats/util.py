@@ -88,12 +88,10 @@ def open_(filename):
         else:
             # If there is no extension, try to guess the format based on file headers
             audio_file = guess_format(filename)
-        if not audio_file:
-            return None
-        return audio_file
+        return audio_file or None
     except KeyError:
         # None is returned if both the methods fail
         return None
     except Exception as error:
-        log.error("Error occurred:\n{}".format(error))
+        log.error(f"Error occurred:\n{error}")
         return None

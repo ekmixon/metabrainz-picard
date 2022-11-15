@@ -98,7 +98,7 @@ class PicardScript():
             id (str): ID code for the script. Defaults to a system generated uuid.
             last_updated (str): The UTC date and time when the script was last updated. Defaults to current date/time.
         """
-        self.title = title if title else DEFAULT_SCRIPT_NAME
+        self.title = title or DEFAULT_SCRIPT_NAME
         self.script = script
         if not id:
             self._set_new_id()
@@ -214,9 +214,9 @@ class PicardScript():
             return False
         # Fix issue where Qt may set the extension twice
         (name, ext) = os.path.splitext(filename)
-        if ext and str(name).endswith('.' + ext):
+        if ext and str(name).endswith(f'.{ext}'):
             filename = name
-        log.debug('Exporting script file: %s' % filename)
+        log.debug(f'Exporting script file: {filename}')
         if file_type == self._file_types()['package']:
             script_text = self.to_yaml()
         else:
@@ -250,7 +250,7 @@ class PicardScript():
         filename, file_type = QtWidgets.QFileDialog.getOpenFileName(parent, dialog_title, default_script_directory, dialog_file_types, options=options)
         if not filename:
             return None
-        log.debug('Importing script file: %s' % filename)
+        log.debug(f'Importing script file: {filename}')
         try:
             with open(filename, 'r', encoding='utf8') as i_file:
                 file_content = i_file.read()
@@ -258,16 +258,15 @@ class PicardScript():
             raise ScriptImportExportError(format=FILE_ERROR_IMPORT, filename=filename, error_msg=error.strerror)
         if not file_content.strip():
             raise ScriptImportExportError(format=FILE_ERROR_IMPORT, filename=filename, error_msg=N_('The file was empty'))
-        if file_type == cls._file_types()['package']:
-            try:
-                return cls().create_from_yaml(file_content)
-            except ScriptImportError as error:
-                raise ScriptImportExportError(format=FILE_ERROR_DECODE, filename=filename, error_msg=error)
-        else:
+        if file_type != cls._file_types()['package']:
             return cls(
                 title=_("Imported from %s") % filename,
                 script=file_content.strip()
             )
+        try:
+            return cls().create_from_yaml(file_content)
+        except ScriptImportError as error:
+            raise ScriptImportExportError(format=FILE_ERROR_DECODE, filename=filename, error_msg=error)
 
     @classmethod
     def create_from_dict(cls, script_dict, create_new_id=True):

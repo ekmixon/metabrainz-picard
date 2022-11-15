@@ -86,42 +86,46 @@ class ReleaseGroup(DataObject):
 
             countries = countries_from_node(node)
 
-            if len(node['media']) > max_tracks:
-                tracks = "+".join(str(m['track-count']) for m in node['media'][:max_tracks]) + '+…'
-            else:
-                tracks = "+".join(str(m['track-count']) for m in node['media'])
-            formats = []
-            for medium in node['media']:
-                if "format" in medium:
-                    formats.append(medium['format'])
+            tracks = (
+                "+".join(str(m['track-count']) for m in node['media'][:max_tracks])
+                + '+…'
+                if len(node['media']) > max_tracks
+                else "+".join(str(m['track-count']) for m in node['media'])
+            )
+
+            formats = [medium['format'] for medium in node['media'] if "format" in medium]
             release = {
-                "id":      node['id'],
-                "year":    node['date'][:4] if "date" in node else "????",
-                "country": limited_join(countries, 10, '+', '…') if countries
+                "id": node['id'],
+                "year": node['date'][:4] if "date" in node else "????",
+                "country": limited_join(countries, 10, '+', '…')
+                if countries
                 else node.get('country', '') or "??",
-                "format":  media_formats_from_node(node['media']),
-                "label":  ", ".join(' '.join(x.split(' ')[:2]) for x in set(labels)),
+                "format": media_formats_from_node(node['media']),
+                "label": ", ".join(
+                    ' '.join(x.split(' ')[:2]) for x in set(labels)
+                ),
                 "catnum": ", ".join(set(catnums)),
                 "tracks": tracks,
                 "barcode": node.get('barcode', '') or _('[no barcode]'),
                 "packaging": node.get('packaging', '') or '??',
                 "disambiguation": node.get('disambiguation', ''),
-                "_disambiguate_name": list(),
+                "_disambiguate_name": [],
                 "totaltracks": sum(m['track-count'] for m in node['media']),
                 "countries": countries,
                 "formats": formats,
             }
+
             data.append(release)
 
         versions = defaultdict(list)
         for release in data:
             name = " / ".join(release[k] for k in namekeys).replace("&", "&&")
             if name == release["tracks"]:
-                name = "%s / %s" % (_('[no release info]'), name)
+                name = f"{_('[no release info]')} / {name}"
             versions[name].append(release)
 
         # de-duplicate names if possible
-        for name, releases in versions.items():
+        for releases in versions.values():
             for a, b in combinations(releases, 2):
                 for key in extrakeys:
                     (value1, value2) = (a[key], b[key])
@@ -131,7 +135,7 @@ class ReleaseGroup(DataObject):
         for name, releases in versions.items():
             for release in releases:
                 dis = " / ".join(filter(None, uniqify(release['_disambiguate_name']))).replace("&", "&&")
-                disname = name if not dis else name + ' / ' + dis
+                disname = f'{name} / {dis}' if dis else name
                 version = {
                     'id': release['id'],
                     'name': disname,

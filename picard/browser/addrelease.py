@@ -92,18 +92,20 @@ def serve_form(token):
         tagger = QCoreApplication.instance()
         tport = tagger.browser_integration.port
         if 'cluster' in payload:
-            cluster = _find_cluster(tagger, payload['cluster'])
-            if not cluster:
-                raise NotFoundError('Cluster not found')
-            return _get_cluster_form(cluster, tport)
-        elif 'file' in payload:
-            file = _find_file(tagger, payload['file'])
-            if not file:
-                raise NotFoundError('File not found')
-            if payload.get('as_release', False):
-                return _get_file_as_release_form(file, tport)
+            if cluster := _find_cluster(tagger, payload['cluster']):
+                return _get_cluster_form(cluster, tport)
             else:
-                return _get_file_as_recording_form(file, tport)
+                raise NotFoundError('Cluster not found')
+        elif 'file' in payload:
+            if file := _find_file(tagger, payload['file']):
+                return (
+                    _get_file_as_release_form(file, tport)
+                    if payload.get('as_release', False)
+                    else _get_file_as_recording_form(file, tport)
+                )
+
+            else:
+                raise NotFoundError('File not found')
         else:
             raise InvalidTokenError
     except jwt.exceptions.InvalidTokenError:
@@ -123,16 +125,20 @@ def _open_url_with_token(payload):
     if isinstance(token, bytes):  # For compatibility with PyJWT 1.x
         token = token.decode()
     browser_integration = QCoreApplication.instance().browser_integration
-    url = 'http://%s:%s/add?token=%s' % (
-        browser_integration.host_address, browser_integration.port, token)
+    url = f'http://{browser_integration.host_address}:{browser_integration.port}/add?token={token}'
+
     open(url)
 
 
 def _find_cluster(tagger, cluster_hash):
-    for cluster in tagger.clusters:
-        if hash(cluster) == cluster_hash:
-            return cluster
-    return None
+    return next(
+        (
+            cluster
+            for cluster in tagger.clusters
+            if hash(cluster) == cluster_hash
+        ),
+        None,
+    )
 
 
 def _find_file(tagger, path):
@@ -195,12 +201,11 @@ def _get_file_as_release_data(file):
 
 def _get_file_as_recording_data(file):
     metadata = file.metadata
-    data = {
+    return {
         'edit-recording.name': metadata['title'],
         'edit-recording.artist_credit.names.0.artist.name': metadata['artist'],
         'edit-recording.length': format_time(file.metadata.length),
     }
-    return data
 
 
 def _add_track_data(data, files):

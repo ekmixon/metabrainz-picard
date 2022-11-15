@@ -85,8 +85,7 @@ try:
         def load(self, filething):
             """Load the INFO tags from the file."""
             riff_file = RiffFile(filething.fileobj)
-            info = self.__find_info_chunk(riff_file.root)
-            if info:
+            if info := self.__find_info_chunk(riff_file.root):
                 for tag in info.subchunks():
                     self.__tags[tag.id] = self.__decode_data(tag.read())
 
@@ -106,37 +105,34 @@ try:
         def delete(self, filething):
             """Deletes the INFO chunk completely from the file."""
             riff_file = RiffFile(filething.fileobj)
-            info = self.__find_info_chunk(riff_file.root)
-            if info:
+            if info := self.__find_info_chunk(riff_file.root):
                 info.delete()
 
         @staticmethod
         def __find_info_chunk(parent):
-            for chunk in parent.subchunks():
-                if chunk.id == 'LIST' and chunk.name == 'INFO':
-                    return chunk
-            return None
+            return next(
+                (
+                    chunk
+                    for chunk in parent.subchunks()
+                    if chunk.id == 'LIST' and chunk.name == 'INFO'
+                ),
+                None,
+            )
 
         @staticmethod
         def __find_subchunk(parent, name):
-            for chunk in parent.subchunks():
-                if chunk.id == name:
-                    return chunk
-            return None
+            return next((chunk for chunk in parent.subchunks() if chunk.id == name), None)
 
         def __save_tag_data(self, info, name, value):
             data = self.__encode_data(value)
-            chunk = self.__find_subchunk(info, name)
-            if chunk:
-                chunk.resize(len(data))
-                chunk.write(data)
-                return chunk
-            else:
+            if not (chunk := self.__find_subchunk(info, name)):
                 return info.insert_chunk(name, data)
+            chunk.resize(len(data))
+            chunk.write(data)
+            return chunk
 
         def __delete_tag(self, info, name):
-            chunk = self.__find_subchunk(info, name)
-            if chunk:
+            if chunk := self.__find_subchunk(info, name):
                 chunk.delete()
 
         @staticmethod
@@ -205,13 +201,11 @@ try:
                 if config.setting['clear_existing_tags']:
                     info.delete(filename)
                 for name, values in metadata.rawitems():
-                    name = translate_tag_to_riff_name(name)
-                    if name:
+                    if name := translate_tag_to_riff_name(name):
                         value = ", ".join(values)
                         info[name] = value
                 for name in metadata.deleted_tags:
-                    name = translate_tag_to_riff_name(name)
-                    if name:
+                    if name := translate_tag_to_riff_name(name):
                         del info[name]
                 info.save(filename)
             elif config.setting['remove_wave_riff_info']:

@@ -159,8 +159,7 @@ class TrackSearchDialog(SearchDialog):
                     release_to_metadata(rel_node, track)
                     rg_node = rel_node['release-group']
                     release_group_to_metadata(rg_node, track)
-                    countries = countries_from_node(rel_node)
-                    if countries:
+                    if countries := countries_from_node(rel_node):
                         track["country"] = ", ".join(countries)
                     self.search_results.append((track, node))
             else:
@@ -201,12 +200,11 @@ class TrackSearchDialog(SearchDialog):
             else:
                 # No files associated. Just a normal search.
                 self.tagger.load_album(track["musicbrainz_albumid"])
+        elif self.file_ and getattr(self.file_.parent, 'album', None):
+            album = self.file_.parent.album
+            self.tagger.move_file_to_nat(self.file_, track["musicbrainz_recordingid"], node)
+            if album.get_num_total_files() == 0:
+                self.tagger.remove_album(album)
         else:
-            if self.file_ and getattr(self.file_.parent, 'album', None):
-                album = self.file_.parent.album
-                self.tagger.move_file_to_nat(self.file_, track["musicbrainz_recordingid"], node)
-                if album.get_num_total_files() == 0:
-                    self.tagger.remove_album(album)
-            else:
-                self.tagger.load_nat(track["musicbrainz_recordingid"], node)
-                self.tagger.move_file_to_nat(self.file_, track["musicbrainz_recordingid"], node)
+            self.tagger.load_nat(track["musicbrainz_recordingid"], node)
+            self.tagger.move_file_to_nat(self.file_, track["musicbrainz_recordingid"], node)

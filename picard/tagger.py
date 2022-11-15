@@ -164,15 +164,9 @@ shutil.copystat = _patched_shutil_copystat
 
 
 def plugin_dirs():
-    if IS_FROZEN:
-        toppath = sys.argv[0]
-    else:
-        toppath = os.path.abspath(__file__)
-
+    toppath = sys.argv[0] if IS_FROZEN else os.path.abspath(__file__)
     topdir = os.path.dirname(toppath)
-    plugin_dir = os.path.join(topdir, "plugins")
-    yield plugin_dir
-
+    yield os.path.join(topdir, "plugins")
     if not os.path.exists(USER_PLUGIN_DIR):
         os.makedirs(USER_PLUGIN_DIR)
     yield USER_PLUGIN_DIR
@@ -193,8 +187,7 @@ class ParseItemsToLoad:
             if not parsed.scheme:
                 self.files.add(item)
             elif parsed.scheme == "command":
-                for x in item[10:].split(';'):
-                    self.commands.append(x.strip())
+                self.commands.extend(x.strip() for x in item[10:].split(';'))
             elif parsed.scheme == "file":
                 # remove file:// prefix safely
                 self.files.add(item[7:])
@@ -467,8 +460,9 @@ class Tagger(QtWidgets.QApplication):
     def pipe_server(self):
         IGNORED = {pipe.Pipe.MESSAGE_TO_IGNORE, pipe.Pipe.NO_RESPONSE_MESSAGE}
         while self.pipe_handler.pipe_running:
-            messages = [x for x in self.pipe_handler.read_from_pipe() if x not in IGNORED]
-            if messages:
+            if messages := [
+                x for x in self.pipe_handler.read_from_pipe() if x not in IGNORED
+            ]:
                 log.debug("pipe messages: %r", messages)
                 thread.to_main(self.load_to_picard, messages)
 
@@ -577,10 +571,7 @@ class Tagger(QtWidgets.QApplication):
         devices = get_cdrom_drives()
 
         if not argstring:
-            if devices:
-                device = devices[0]
-            else:
-                device = None
+            device = devices[0] if devices else None
         elif argstring in devices:
             device = argstring
         else:
@@ -700,7 +691,7 @@ class Tagger(QtWidgets.QApplication):
             callback(False, error_msg)
 
     @classmethod
-    def on_mb_login_finished(self, callback, successful, error_msg):
+    def on_mb_login_finished(cls, callback, successful, error_msg):
         if successful:
             load_user_collections()
         callback(successful, error_msg)
@@ -920,8 +911,7 @@ class Tagger(QtWidgets.QApplication):
                 log.info("File ignored (matching %r): %r", pattern, filename)
                 continue
             if filename not in self.files:
-                file = open_file(filename)
-                if file:
+                if file := open_file(filename):
                     self.files[filename] = file
                     new_files.append(file)
                 QtCore.QCoreApplication.processEvents()
@@ -1015,7 +1005,6 @@ class Tagger(QtWidgets.QApplication):
     def browser_lookup(self, item):
         """Lookup the object's metadata on the MusicBrainz website."""
         lookup = self.get_file_lookup()
-        metadata = item.metadata
         # Only lookup via MB IDs if matched to a DataObject; otherwise ignore and use metadata details
         if isinstance(item, DataObject):
             itemid = item.id
@@ -1024,6 +1013,7 @@ class Tagger(QtWidgets.QApplication):
             elif isinstance(item, Album):
                 lookup.album_lookup(itemid)
         else:
+            metadata = item.metadata
             lookup.tag_lookup(
                 metadata["albumartist"] if item.is_album_like() else metadata["artist"],
                 metadata["album"],
@@ -1360,7 +1350,7 @@ def print_help_for_commands():
     helpcmd = []
     for name in sorted(REMOTE_COMMANDS):
         remcmd = REMOTE_COMMANDS[name]
-        s = "  - %-34s %s" % (name + " " + remcmd.help_args, remcmd.help_text)
+        s = "  - %-34s %s" % (f"{name} {remcmd.help_args}", remcmd.help_text)
         helpcmd.append(fill(s, width=maxwidth, subsequent_indent=' '*39))
 
     print("""usage: picard -e [command] [arguments ...]
@@ -1434,15 +1424,14 @@ If a new instance will not be spawned files/directories will be passed to the ex
         for e in args.exec:
             args.remote_commands_help = args.remote_commands_help or "HELP" in {x.upper().strip() for x in e}
             remote_command_args = e[1:] or ['']
-            for arg in remote_command_args:
-                args.processable.append(f"command://{e[0]} {arg}")
+            args.processable.extend(
+                f"command://{e[0]} {arg}" for arg in remote_command_args
+            )
 
     return args
 
 
 def main(localedir=None, autoupdate=True):
-    EXIT_NO_NEW_INSTANCE = 30403
-
     # Some libs (ie. Phonon) require those to be set
     QtWidgets.QApplication.setApplicationName(PICARD_APP_NAME)
     QtWidgets.QApplication.setOrganizationName(PICARD_ORG_NAME)
@@ -1494,6 +1483,8 @@ def main(localedir=None, autoupdate=True):
     # pipe has sent its args to existing one, doesn't need to start
     if not should_start:
         log.debug("No need for spawning a new instance, exiting...")
+        EXIT_NO_NEW_INSTANCE = 30403
+
         # just a custom exit code to show that picard instance wasn't created
         sys.exit(EXIT_NO_NEW_INSTANCE)
 

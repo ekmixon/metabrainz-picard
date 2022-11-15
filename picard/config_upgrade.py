@@ -191,10 +191,12 @@ def upgrade_to_v1_4_0_dev_3(config):
         ('ca_provider_use_caa_release_group_fallback', 'CaaReleaseGroup')
     ]
 
-    newopts = []
-    for old, new in map_ca_provider:
-        if old in _s:
-            newopts.append((new, _s.value(old, BoolOption, True)))
+    newopts = [
+        (new, _s.value(old, BoolOption, True))
+        for old, new in map_ca_provider
+        if old in _s
+    ]
+
     _s['ca_providers'] = newopts
 
 
@@ -227,8 +229,7 @@ def upgrade_to_v1_4_0_dev_6(config):
     if old_enabled_option in _s:
         _s["enable_tagger_scripts"] = _s.value(old_enabled_option, BoolOption, False)
     if old_script_text_option in _s:
-        old_script_text = _s.value(old_script_text_option, TextOption, "")
-        if old_script_text:
+        if old_script_text := _s.value(old_script_text_option, TextOption, ""):
             old_script = (0, unique_numbered_title(_(DEFAULT_SCRIPT_NAME), list_of_scripts), _s["enable_tagger_scripts"], old_script_text)
             list_of_scripts.append(old_script)
     _s["list_of_scripts"] = list_of_scripts
@@ -282,7 +283,7 @@ def upgrade_to_v2_2_0_dev_3(config):
     if old_opt in _s:
         if _s[old_opt]:
             new_opt = "genres_filter"
-            tags = ["-" + e.strip().lower() for e in _s[old_opt].split(',')]
+            tags = [f"-{e.strip().lower()}" for e in _s[old_opt].split(',')]
             _s[new_opt] = "\n".join(tags)
         _s.remove(old_opt)
 

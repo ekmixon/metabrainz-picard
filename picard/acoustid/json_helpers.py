@@ -33,9 +33,7 @@ def _make_releases_node(recording):
     release_list = []
     for release_group in recording['releasegroups']:
         for release in release_group['releases']:
-            release_mb = {}
-            release_mb['id'] = release['id']
-            release_mb['release-group'] = {}
+            release_mb = {'id': release['id'], 'release-group': {}}
             release_mb['release-group']['id'] = release_group['id']
             if 'type' in release_group:
                 release_mb['release-group']['primary-type'] = release_group['type']
@@ -94,12 +92,11 @@ def _make_releases_node(recording):
 
 
 def _make_artist_node(artist):
-    artist_node = {
+    return {
         'name': artist['name'],
         'sort-name': artist['name'],
-        'id': artist['id']
+        'id': artist['id'],
     }
-    return artist_node
 
 
 def _make_artist_credit_node(artists):

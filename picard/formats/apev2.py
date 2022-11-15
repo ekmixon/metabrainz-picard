@@ -137,21 +137,22 @@ class APEv2File(File):
         if file.tags:
             for origname, values in file.tags.items():
                 name_lower = origname.lower()
-                if (values.kind == mutagen.apev2.BINARY
-                    and name_lower.startswith("cover art")):
-                    if b'\0' in values.value:
-                        descr, data = values.value.split(b'\0', 1)
-                        try:
-                            coverartimage = TagCoverArtImage(
-                                file=filename,
-                                tag=name_lower,
-                                data=data,
-                            )
-                        except CoverArtImageError as e:
-                            log.error('Cannot load image from %r: %s' %
-                                      (filename, e))
-                        else:
-                            metadata.images.append(coverartimage)
+                if (
+                    values.kind == mutagen.apev2.BINARY
+                    and name_lower.startswith("cover art")
+                ) and b'\0' in values.value:
+                    descr, data = values.value.split(b'\0', 1)
+                    try:
+                        coverartimage = TagCoverArtImage(
+                            file=filename,
+                            tag=name_lower,
+                            data=data,
+                        )
+                    except CoverArtImageError as e:
+                        log.error('Cannot load image from %r: %s' %
+                                  (filename, e))
+                    else:
+                        metadata.images.append(coverartimage)
 
                 # skip EXTERNAL and BINARY values
                 if values.kind != mutagen.apev2.TEXT:
@@ -177,7 +178,7 @@ class APEv2File(File):
                         if value.endswith(')'):
                             start = value.rfind(' (')
                             if start > 0:
-                                name += ':' + value[start + 2:-1]
+                                name += f':{value[start + 2:-1]}'
                                 value = value[:start]
                     elif name in self.__rtranslate:
                         name = self.__rtranslate[name]
@@ -213,18 +214,16 @@ class APEv2File(File):
             # tracknumber/totaltracks => Track
             if name == 'tracknumber':
                 if 'totaltracks' in metadata:
-                    value = '%s/%s' % (value, metadata['totaltracks'])
-            # discnumber/totaldiscs => Disc
+                    value = f"{value}/{metadata['totaltracks']}"
             elif name == 'discnumber':
                 if 'totaldiscs' in metadata:
-                    value = '%s/%s' % (value, metadata['totaldiscs'])
+                    value = f"{value}/{metadata['totaldiscs']}"
             elif name in {'totaltracks', 'totaldiscs'}:
                 continue
-            # "performer:Piano=Joe Barr" => "Performer=Joe Barr (Piano)"
             elif name.startswith('performer:') or name.startswith('comment:'):
                 name, desc = name.split(':', 1)
                 if desc:
-                    value += ' (%s)' % desc
+                    value += f' ({desc})'
             temp.setdefault(real_name, []).append(value)
         for name, values in temp.items():
             tags[name] = values
@@ -246,22 +245,23 @@ class APEv2File(File):
             real_name = self._get_tag_name(tag)
             if real_name in {'Lyrics', 'Comment', 'Performer'}:
                 parts = tag.split(':', 1)
-                if len(parts) == 2:
-                    tag_type_regex = re.compile(r"\(%s\)$" % re.escape(parts[1]))
-                else:
-                    tag_type_regex = re.compile(r"[^)]$")
+                tag_type_regex = (
+                    re.compile(r"\(%s\)$" % re.escape(parts[1]))
+                    if len(parts) == 2
+                    else re.compile(r"[^)]$")
+                )
+
                 existing_tags = tags.get(real_name, [])
                 for item in existing_tags:
                     if re.search(tag_type_regex, item):
                         existing_tags.remove(item)
                 tags[real_name] = existing_tags
             elif tag in {'totaltracks', 'totaldiscs'}:
-                tagstr = real_name.lower() + 'number'
+                tagstr = f'{real_name.lower()}number'
                 if tagstr in metadata:
                     tags[real_name] = metadata[tagstr]
-            else:
-                if real_name in tags:
-                    del tags[real_name]
+            elif real_name in tags:
+                del tags[real_name]
 
     def _get_tag_name(self, name):
         if name in self.__casemap:
@@ -375,7 +375,7 @@ class AACFile(APEv2File):
     def _info(self, metadata, file):
         super()._info(metadata, file)
         if file.tags:
-            metadata['~format'] = "%s (APEv2)" % self.NAME
+            metadata['~format'] = f"{self.NAME} (APEv2)"
 
     def _save(self, filename, metadata):
         config = get_config()

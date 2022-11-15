@@ -54,4 +54,4 @@ class CoverArtProviderCaaReleaseGroup(CoverArtProviderCaa):
 
     @property
     def _caa_path(self):
-        return "/release-group/%s/" % self.metadata["musicbrainz_releasegroupid"]
+        return f'/release-group/{self.metadata["musicbrainz_releasegroupid"]}/'

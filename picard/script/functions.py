@@ -90,17 +90,11 @@ class FunctionRegistryItem:
         return data
 
     def markdowndoc(self, postprocessor=None):
-        if self.documentation is not None:
-            ret = _(self.documentation)
-        else:
-            ret = ''
+        ret = _(self.documentation) if self.documentation is not None else ''
         return self._postprocess(ret, postprocessor)
 
     def htmldoc(self, postprocessor=None):
-        if markdown is not None:
-            ret = markdown(self.markdowndoc())
-        else:
-            ret = ''
+        ret = markdown(self.markdowndoc()) if markdown is not None else ''
         return self._postprocess(ret, postprocessor)
 
 
@@ -125,7 +119,7 @@ def register_script_function(function, name=None, eval_args=True,
     varargs = varargs is not None
     defaults = len(defaults) if defaults else 0
 
-    argcount = Bound(args - defaults, args if not varargs else None)
+    argcount = Bound(args - defaults, None if varargs else args)
 
     if name is None:
         name = function.__name__
@@ -203,8 +197,7 @@ Returns first non empty argument."""
 ))
 def func_if2(parser, *args):
     for arg in args:
-        arg = arg.eval(parser)
-        if arg:
+        if arg := arg.eval(parser):
             return arg
     return ''
 
@@ -323,10 +316,7 @@ def func_replacemulti(parser, multi, search, replace, separator=MULTI_VALUED_JOI
 Returns true, if `x` contains `y`."""
 ))
 def func_in(parser, text, needle):
-    if needle in text:
-        return "1"
-    else:
-        return ""
+    return "1" if needle in text else ""
 
 
 @script_function(eval_args=False, documentation=N_(
@@ -371,9 +361,9 @@ def func_rsearch(parser, text, pattern):
         return ""
     if match:
         try:
-            return match.group(1)
+            return match[1]
         except IndexError:
-            return match.group(0)
+            return match[0]
     return ""
 
 
@@ -518,10 +508,7 @@ Trims all leading and trailing whitespaces from `text`.
     The optional second parameter `char` specifies the character to trim."""
 ))
 def func_trim(parser, text, char=None):
-    if char:
-        return text.strip(char)
-    else:
-        return text.strip()
+    return text.strip(char) if char else text.strip()
 
 
 @script_function(documentation=N_(
@@ -574,9 +561,7 @@ Example:
 def func_div(parser, x, y, *args):
     try:
         return _compute_int(operator.floordiv, x, y, *args)
-    except ValueError:
-        return ""
-    except ZeroDivisionError:
+    except (ValueError, ZeroDivisionError):
         return ""
 
 
@@ -624,10 +609,7 @@ Returns true if either `x` or `y` not empty.
     The result is true if ANY of the arguments is not empty."""
 ))
 def func_or(parser, x, y, *args):
-    if _compute_logic(any, x, y, *args):
-        return "1"
-    else:
-        return ""
+    return "1" if _compute_logic(any, x, y, *args) else ""
 
 
 @script_function(documentation=N_(
@@ -638,10 +620,7 @@ Returns true if both `x` and `y` are not empty.
     The result is true if ALL of the arguments are not empty."""
 ))
 def func_and(parser, x, y, *args):
-    if _compute_logic(all, x, y, *args):
-        return "1"
-    else:
-        return ""
+    return "1" if _compute_logic(all, x, y, *args) else ""
 
 
 @script_function(documentation=N_(
@@ -650,10 +629,7 @@ def func_and(parser, x, y, *args):
 Returns true if `x` is empty."""
 ))
 def func_not(parser, x):
-    if not x:
-        return "1"
-    else:
-        return ""
+    return "" if x else "1"
 
 
 @script_function(documentation=N_(
@@ -662,10 +638,7 @@ def func_not(parser, x):
 Returns true if `x` equals `y`."""
 ))
 def func_eq(parser, x, y):
-    if x == y:
-        return "1"
-    else:
-        return ""
+    return "1" if x == y else ""
 
 
 @script_function(documentation=N_(
@@ -674,10 +647,7 @@ def func_eq(parser, x, y):
 Returns true if `x` does not equal `y`."""
 ))
 def func_ne(parser, x, y):
-    if x != y:
-        return "1"
-    else:
-        return ""
+    return "1" if x != y else ""
 
 
 def _cmp(op, x, y, _type):
@@ -867,10 +837,7 @@ def func_firstalphachar(parser, text="", nonalpha="#"):
     if len(text) == 0:
         return nonalpha
     firstchar = text[0]
-    if firstchar.isalpha():
-        return firstchar.upper()
-    else:
-        return nonalpha
+    return firstchar.upper() if firstchar.isalpha() else nonalpha
 
 
 @script_function(documentation=N_(
@@ -898,13 +865,12 @@ def func_firstwords(parser, text, length):
         length = 0
     if len(text) <= length:
         return text
-    else:
-        try:
-            if text[length] == ' ':
-                return text[:length]
-            return text[:length].rsplit(' ', 1)[0]
-        except IndexError:
-            return ''
+    try:
+        if text[length] == ' ':
+            return text[:length]
+        return text[:length].rsplit(' ', 1)[0]
+    except IndexError:
+        return ''
 
 
 @script_function(documentation=N_(
@@ -915,9 +881,7 @@ Returns true if `text` starts with `prefix`.
 _Since Picard 1.4_"""
 ))
 def func_startswith(parser, text, prefix):
-    if text.startswith(prefix):
-        return "1"
-    return ""
+    return "1" if text.startswith(prefix) else ""
 
 
 @script_function(documentation=N_(
@@ -928,9 +892,7 @@ Returns true if `text` ends with `suffix`.
 _Since Picard 1.4_"""
 ))
 def func_endswith(parser, text, suffix):
-    if text.endswith(suffix):
-        return "1"
-    return ""
+    return "1" if text.endswith(suffix) else ""
 
 
 @script_function(documentation=N_(
@@ -965,9 +927,7 @@ def func_swapprefix(parser, text, *prefixes):
     # Inspired by the swapprefix plugin by Philipp Wolfer.
 
     text, prefix = _delete_prefix(parser, text, *prefixes)
-    if prefix != '':
-        return text + ', ' + prefix
-    return text
+    return f'{text}, {prefix}' if prefix != '' else text
 
 
 @script_function(check_argcount=False, documentation=N_(
@@ -1001,8 +961,7 @@ def _delete_prefix(parser, text, *prefixes):
         prefixes = ('A', 'The')
     text = text.strip()
     rx = '(' + r'\s+)|('.join(map(re.escape, prefixes)) + r'\s+)'
-    match = re.match(rx, text)
-    if match:
+    if match := re.match(rx, text):
         pref = match.group()
         return text[len(pref):], pref.strip()
     return text, ''
@@ -1044,10 +1003,7 @@ Example:
 """
 ))
 def func_eq_all(parser, x, *args):
-    for i in args:
-        if x != i:
-            return ''
-    return '1'
+    return next(('' for i in args if x != i), '1')
 
 
 @script_function(check_argcount=False, documentation=N_(
@@ -1102,7 +1058,7 @@ def iswbound(char):
     # from https://github.com/metabrainz/picard-plugins/blob/2.0/plugins/titlecase/titlecase.py
     """ Checks whether the given character is a word boundary """
     category = unicodedata.category(char)
-    return "Zs" == category or "Sk" == category or "P" == category[0]
+    return category == "Zs" or category == "Sk" or category[0] == "P"
 
 
 @script_function(documentation=N_(
@@ -1113,10 +1069,7 @@ Returns true, if the file processed is an audio file.
 _Since Picard 2.2_"""
 ))
 def func_is_audio(parser):
-    if func_is_video(parser) == "1":
-        return ""
-    else:
-        return "1"
+    return "" if func_is_video(parser) == "1" else "1"
 
 
 @script_function(documentation=N_(
@@ -1145,9 +1098,7 @@ Note that prior to Picard 2.3.2 `$find` returned "-1" if `needle` was not found.
 ))
 def func_find(parser, haystack, needle):
     index = haystack.find(needle)
-    if index < 0:
-        return ''
-    return str(index)
+    return '' if index < 0 else str(index)
 
 
 @script_function(documentation=N_(
@@ -1418,9 +1369,7 @@ If translate is not blank, the output will be translated into the current locale
 ))
 def func_countryname(parser, country_code, translate=""):
     name = RELEASE_COUNTRIES.get(country_code.strip().upper(), "")
-    if translate:
-        return gettext_countries(name)
-    return name
+    return gettext_countries(name) if translate else name
 
 
 DateTuple = namedtuple('DateTuple', ('year', 'month', 'day'))
@@ -1560,7 +1509,7 @@ def _type_args(_type, *args):
     haystack = set()
     # Automatically expand multi-value arguments
     for item in args:
-        haystack = haystack.union(set(x for x in item.split(MULTI_VALUED_JOINER)))
+        haystack = haystack.union(set(item.split(MULTI_VALUED_JOINER)))
     if not _type:
         _type = 'auto'
     _typer = None
@@ -1568,7 +1517,7 @@ def _type_args(_type, *args):
         _type = 'text'
         for _test_type in (int, float):
             try:
-                _type = set(_test_type(item) for item in haystack)
+                _type = {_test_type(item) for item in haystack}
                 _type = _test_type.__name__
                 break
             except ValueError:
@@ -1578,13 +1527,11 @@ def _type_args(_type, *args):
         _typer = int
     elif _type == 'float':
         _typer = float
-    elif _type in ('text', 'nocase'):
-        pass
-    else:
+    elif _type not in ('text', 'nocase'):
         # Unknown processing type
         raise ValueError
     if _typer is not None:
-        haystack = set(_typer(item) for item in haystack)
+        haystack = {_typer(item) for item in haystack}
     return haystack
 
 

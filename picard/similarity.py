@@ -32,19 +32,13 @@ from picard.util.astrcmp import astrcmp
 
 def normalize(orig_string):
     """Strips non-alphanumeric characters from a string unless doing so would make it blank."""
-    string = strip_non_alnum(orig_string.lower())
-    if not string:
-        string = orig_string
-    return string
+    return strip_non_alnum(orig_string.lower()) or orig_string
 
 
 def similarity(a1, b1):
     """Calculates similarity of single words as a function of their edit distance."""
     a2 = normalize(a1)
-    if a2:
-        b2 = normalize(b1)
-    else:
-        b2 = ""
+    b2 = normalize(b1) if a2 else ""
     return astrcmp(a2, b2)
 
 

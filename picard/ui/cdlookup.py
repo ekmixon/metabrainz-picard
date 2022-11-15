@@ -121,8 +121,7 @@ class CDLookupDialog(PicardDialog):
         super().accept()
 
     def lookup(self):
-        submission_url = self.disc.submission_url
-        if submission_url:
+        if submission_url := self.disc.submission_url:
             lookup = self.tagger.get_file_lookup()
             lookup.discid_submission(submission_url)
         else:
@@ -134,14 +133,13 @@ class CDLookupDialog(PicardDialog):
         if self.ui.release_list:
             header = self.ui.release_list.header()
             config = get_config()
-            state = config.persist[self.dialog_header_state]
-            if state:
+            if state := config.persist[self.dialog_header_state]:
                 header.restoreState(state)
-                log.debug("restore_state: %s" % self.dialog_header_state)
+                log.debug(f"restore_state: {self.dialog_header_state}")
 
     def save_header_state(self):
         if self.ui.release_list:
             state = self.ui.release_list.header().saveState()
             config = get_config()
             config.persist[self.dialog_header_state] = state
-            log.debug("save_state: %s" % self.dialog_header_state)
+            log.debug(f"save_state: {self.dialog_header_state}")

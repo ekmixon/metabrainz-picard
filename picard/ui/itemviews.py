@@ -343,7 +343,7 @@ class ConfigurableColumnsHeader(TristateSortHeaderView):
 
     def __init__(self, parent=None):
         super().__init__(QtCore.Qt.Orientation.Horizontal, parent)
-        self._visible_columns = set([0])
+        self._visible_columns = {0}
 
         # The following are settings applied to default headers
         # of QTreeView and QTreeWidget.
@@ -609,7 +609,7 @@ class BaseTreeView(QtWidgets.QTreeWidget):
                 releases_menu.setEnabled(False)
 
         if config.setting["enable_ratings"] and \
-           len(self.window.selected_objects) == 1 and isinstance(obj, Track):
+               len(self.window.selected_objects) == 1 and isinstance(obj, Track):
             menu.addSeparator()
             action = QtWidgets.QWidgetAction(menu)
             action.setDefaultWidget(RatingWidget(menu, obj))
@@ -651,7 +651,7 @@ class BaseTreeView(QtWidgets.QTreeWidget):
             scripts_menu.setIcon(self.panel.icon_plugins)
             menu.addMenu(scripts_menu)
 
-        if isinstance(obj, Cluster) or isinstance(obj, ClusterList) or isinstance(obj, Album):
+        if isinstance(obj, (Cluster, ClusterList, Album)):
             menu.addSeparator()
             menu.addAction(self.expand_all_action)
             menu.addAction(self.collapse_all_action)
@@ -678,7 +678,7 @@ class BaseTreeView(QtWidgets.QTreeWidget):
         header = self.header()
         if header_state:
             header.restoreState(header_state)
-            for i in range(0, self.columnCount()):
+            for i in range(self.columnCount()):
                 header.show_column(i, not self.isColumnHidden(i))
         else:
             header.update_visible_columns([0, 1, 2])
@@ -702,8 +702,7 @@ class BaseTreeView(QtWidgets.QTreeWidget):
 
     def startDrag(self, supportedActions):
         """Start drag, *without* using pixmap."""
-        items = self.selectedItems()
-        if items:
+        if items := self.selectedItems():
             drag = QtGui.QDrag(self)
             drag.setMimeData(self.mimeData(items))
             # Render the first selected element as drag representation
@@ -747,8 +746,7 @@ class BaseTreeView(QtWidgets.QTreeWidget):
             log.debug("Dropped the URL: %r", url.toString(QtCore.QUrl.UrlFormattingOption.RemoveUserInfo))
             if url.scheme() == "file" or not url.scheme():
                 filename = normpath(url.toLocalFile().rstrip("\0"))
-                file = tagger.files.get(filename)
-                if file:
+                if file := tagger.files.get(filename):
                     files.append(file)
                 else:
                     new_paths.append(filename)
@@ -770,25 +768,18 @@ class BaseTreeView(QtWidgets.QTreeWidget):
     def dropMimeData(self, parent, index, data, action):
         target = None
         if parent:
-            if index == parent.childCount():
-                item = parent
-            else:
-                item = parent.child(index)
+            item = parent if index == parent.childCount() else parent.child(index)
             if item is not None:
                 target = item.obj
         if isinstance(self, FileTreeView) and target is None:
             target = self.tagger.unclustered_files
         log.debug("Drop target = %r", target)
         handled = False
-        # text/uri-list
-        urls = data.urls()
-        if urls:
+        if urls := data.urls():
             # Use QTimer.singleShot to run expensive processing outside of the drop handler.
             QtCore.QTimer.singleShot(0, partial(self.drop_urls, urls, target, self._move_to_multi_tracks))
             handled = True
-        # application/picard.album-list
-        albums = data.data("application/picard.album-list")
-        if albums:
+        if albums := data.data("application/picard.album-list"):
             album_ids = bytes(albums).decode().split("\n")
             log.debug("Dropped albums = %r", album_ids)
             files = iter_files_from_objects(self.tagger.load_album(id) for id in album_ids)
@@ -976,7 +967,7 @@ class AlbumItem(TreeItem):
             oldnum = self.childCount() - 1
             newnum = len(album.tracks)
             if oldnum > newnum:  # remove old items
-                for i in range(oldnum - newnum):
+                for _ in range(oldnum - newnum):
                     item = self.child(newnum)
                     selection_changed |= item.isSelected()
                     self.takeChild(newnum)
@@ -1017,13 +1008,12 @@ class AlbumItem(TreeItem):
             else:
                 self.setIcon(MainPanel.TITLE_COLUMN, AlbumItem.icon_cd_saved)
                 self.setToolTip(MainPanel.TITLE_COLUMN, _("Album unchanged and complete"))
+        elif album.is_modified():
+            self.setIcon(MainPanel.TITLE_COLUMN, AlbumItem.icon_cd_modified)
+            self.setToolTip(MainPanel.TITLE_COLUMN, _("Album modified"))
         else:
-            if album.is_modified():
-                self.setIcon(MainPanel.TITLE_COLUMN, AlbumItem.icon_cd_modified)
-                self.setToolTip(MainPanel.TITLE_COLUMN, _("Album modified"))
-            else:
-                self.setIcon(MainPanel.TITLE_COLUMN, AlbumItem.icon_cd)
-                self.setToolTip(MainPanel.TITLE_COLUMN, _("Album unchanged"))
+            self.setIcon(MainPanel.TITLE_COLUMN, AlbumItem.icon_cd)
+            self.setToolTip(MainPanel.TITLE_COLUMN, _("Album unchanged"))
         for i, column in enumerate(MainPanel.columns):
             self.setText(i, album.column(column[1]))
         if selection_changed and update_selection:
@@ -1084,7 +1074,7 @@ class TrackItem(TreeItem):
                 oldnum = self.childCount()
                 newnum = track.num_linked_files
                 if oldnum > newnum:  # remove old items
-                    for i in range(oldnum - newnum):
+                    for _ in range(oldnum - newnum):
                         self.takeChild(newnum - 1).obj.item = None
                     oldnum = newnum
                 for i in range(oldnum):  # update existing items

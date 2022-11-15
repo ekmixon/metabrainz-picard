@@ -52,7 +52,7 @@ class Collection(QtCore.QObject):
         }
 
     def __repr__(self):
-        return '<Collection %s (%s)>' % (self.name, self.id)
+        return f'<Collection {self.name} ({self.id})>'
 
     def _modify(self, kind, ids, callback):
         ids -= self.pending
@@ -152,15 +152,16 @@ def load_user_collections(callback=None):
 def add_release_to_user_collections(release_node):
     """Add album to collections"""
     # Check for empy collection list
-    if "collections" in release_node:
-        release_id = release_node['id']
-        config = get_config()
-        username = config.persist["oauth_username"].lower()
-        for node in release_node['collections']:
-            if node['editor'].lower() == username:
-                col_id = node['id']
-                col_name = node['name']
-                col_size = node['release-count']
-                collection = get_user_collection(col_id, col_name, col_size)
-                collection.releases.add(release_id)
-                log.debug("Adding release %r to %r", release_id, collection)
+    if "collections" not in release_node:
+        return
+    release_id = release_node['id']
+    config = get_config()
+    username = config.persist["oauth_username"].lower()
+    for node in release_node['collections']:
+        if node['editor'].lower() == username:
+            col_id = node['id']
+            col_name = node['name']
+            col_size = node['release-count']
+            collection = get_user_collection(col_id, col_name, col_size)
+            collection.releases.add(release_id)
+            log.debug("Adding release %r to %r", release_id, collection)

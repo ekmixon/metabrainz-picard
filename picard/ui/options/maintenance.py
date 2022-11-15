@@ -146,7 +146,7 @@ class MaintenanceOptionsPage(OptionsPage):
             # height of 25 pixels.  Long line or multi-line values will be expanded to display up to 5
             # lines, assuming a standard line height of 18 pixels.  Long lines are defined as having over
             # 50 characters.
-            text_rows = max(text.count("\n") + 1, int(len(text) / 50))
+            text_rows = max(text.count("\n") + 1, len(text) // 50)
             row_height = max(25, 18 * min(5, text_rows))
             self.ui.tableWidget.setRowHeight(row, row_height)
             self.ui.tableWidget.setCellWidget(row, 1, tableitem)
@@ -205,7 +205,7 @@ class MaintenanceOptionsPage(OptionsPage):
             return
         # Fix issue where Qt may set the extension twice
         (name, ext) = path.splitext(filename)
-        if ext and str(name).endswith('.' + ext):
+        if ext and str(name).endswith(f'.{ext}'):
             filename = name
 
         if config.save_user_backup(filename):
@@ -231,7 +231,7 @@ class MaintenanceOptionsPage(OptionsPage):
             self
         )
         dialog.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Cancel)
-        if not dialog.exec_() == QtWidgets.QMessageBox.StandardButton.Ok:
+        if dialog.exec_() != QtWidgets.QMessageBox.StandardButton.Ok:
             return
 
         config = get_config()
@@ -248,7 +248,7 @@ class MaintenanceOptionsPage(OptionsPage):
         filename, file_type = QtWidgets.QFileDialog.getOpenFileName(self, dialog_title, directory, dialog_file_types, options=options)
         if not filename:
             return
-        log.warning('Loading configuration from %s' % filename)
+        log.warning(f'Loading configuration from {filename}')
         if load_new_config(filename):
             config = get_config()
             upgrade_config(config)
@@ -286,7 +286,7 @@ class MaintenanceOptionsPage(OptionsPage):
             item.setCheckState(state)
 
     def save(self):
-        if not self.ui.enable_cleanup.checkState() == QtCore.Qt.CheckState.Checked:
+        if self.ui.enable_cleanup.checkState() != QtCore.Qt.CheckState.Checked:
             return
         to_remove = set(self.selected_options())
         if to_remove and QtWidgets.QMessageBox.question(

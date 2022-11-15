@@ -288,7 +288,7 @@ class MP4File(File):
             elif self.supports_tag(name) and name not in self.__other_supported_tags:
                 values = [v.encode("utf-8") for v in values]
                 name = self.__casemap.get(name, name)
-                tags['----:com.apple.iTunes:' + name] = values
+                tags[f'----:com.apple.iTunes:{name}'] = values
 
         if "tracknumber" in metadata:
             try:
@@ -335,9 +335,12 @@ class MP4File(File):
         """Remove the tags from the file that were deleted in the UI"""
         for tag in metadata.deleted_tags:
             real_name = self._get_tag_name(tag)
-            if real_name and real_name in tags:
-                if tag not in {"totaltracks", "totaldiscs"}:
-                    del tags[real_name]
+            if (
+                real_name
+                and real_name in tags
+                and tag not in {"totaltracks", "totaldiscs"}
+            ):
+                del tags[real_name]
 
     @classmethod
     def supports_tag(cls, name):
@@ -369,12 +372,12 @@ class MP4File(File):
             return "disk"
         elif self.supports_tag(name) and name not in self.__other_supported_tags:
             name = self.__casemap.get(name, name)
-            return '----:com.apple.iTunes:' + name
+            return f'----:com.apple.iTunes:{name}'
 
     def _info(self, metadata, file):
         super()._info(metadata, file)
         if hasattr(file.info, 'codec_description') and file.info.codec_description:
-            metadata['~format'] = "%s (%s)" % (metadata['~format'], file.info.codec_description)
+            metadata['~format'] = f"{metadata['~format']} ({file.info.codec_description})"
         filename = file.filename
         if isinstance(filename, bytes):
             filename = filename.decode()

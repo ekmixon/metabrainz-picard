@@ -132,7 +132,7 @@ class ArrowButton(QtWidgets.QPushButton):
     """
 
     def __init__(self, icon_name, command=None, parent=None):
-        icon = QtGui.QIcon(":/images/16x16/" + icon_name + '.png')
+        icon = QtGui.QIcon(f":/images/16x16/{icon_name}.png")
         super().__init__(icon, "", parent=parent)
         if command is not None:
             self.clicked.connect(command)
@@ -578,7 +578,7 @@ class CoverArtProviderCaa(CoverArtProvider):
 
     @property
     def _caa_path(self):
-        return "/release/%s/" % self.metadata["musicbrainz_albumid"]
+        return f'/release/{self.metadata["musicbrainz_albumid"]}/'
 
     def queue_images(self):
         self.album.tagger.webservice.get(
@@ -599,10 +599,13 @@ class CoverArtProviderCaa(CoverArtProvider):
         self.album._requests -= 1
         if error:
             if not (error == QNetworkReply.NetworkError.ContentNotFoundError and self.ignore_json_not_found_error):
-                self.error('CAA JSON error: %s' % (http.errorString()))
+                self.error(f'CAA JSON error: {http.errorString()}')
         else:
             if self.restrict_types:
-                log.debug('CAA types: included: %s, excluded: %s' % (self.caa_types, self.caa_types_to_omit,))
+                log.debug(
+                    f'CAA types: included: {self.caa_types}, excluded: {self.caa_types_to_omit}'
+                )
+
             try:
                 config = get_config()
                 for image in data["images"]:
@@ -610,15 +613,16 @@ class CoverArtProviderCaa(CoverArtProvider):
                         continue
                     is_pdf = image["image"].endswith('.pdf')
                     if is_pdf and not config.setting["save_images_to_files"]:
-                        log.debug("Skipping pdf cover art : %s" %
-                                  image["image"])
+                        log.debug(f'Skipping pdf cover art : {image["image"]}')
                         continue
                     # if image has no type set, we still want it to match
                     # pseudo type 'unknown'
-                    if not image["types"]:
-                        image["types"] = ["unknown"]
-                    else:
-                        image["types"] = list(map(str.lower, image["types"]))
+                    image["types"] = (
+                        list(map(str.lower, image["types"]))
+                        if image["types"]
+                        else ["unknown"]
+                    )
+
                     if self.restrict_types:
                         # only keep enabled caa types
                         types = set(image["types"]).intersection(
@@ -635,11 +639,7 @@ class CoverArtProviderCaa(CoverArtProvider):
                         types = True
                     if types:
                         urls = caa_url_fallback_list(config.setting["caa_image_size"], image["thumbnails"])
-                        if not urls or is_pdf:
-                            url = image["image"]
-                        else:
-                            # FIXME: try other urls in case of 404
-                            url = urls[0]
+                        url = image["image"] if not urls or is_pdf else urls[0]
                         coverartimage = self.coverartimage_class(
                             url,
                             types=image["types"],
@@ -661,10 +661,10 @@ class CoverArtProviderCaa(CoverArtProvider):
                             coverartimage.can_be_saved_to_tags = False
                         self.queue_put(coverartimage)
                         if config.setting["save_only_one_front_image"] and \
-                                config.setting["save_images_to_files"] and \
-                                image["front"]:
+                                    config.setting["save_images_to_files"] and \
+                                    image["front"]:
                             break
             except (AttributeError, KeyError, TypeError) as e:
-                self.error('CAA JSON error: %s' % e)
+                self.error(f'CAA JSON error: {e}')
 
         self.next_in_queue()

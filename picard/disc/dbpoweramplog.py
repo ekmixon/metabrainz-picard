@@ -38,8 +38,7 @@ def filter_toc_entries(lines):
     """
     last_track_num = 0
     for line in lines:
-        m = RE_TOC_ENTRY.match(line)
-        if m:
+        if m := RE_TOC_ENTRY.match(line):
             track_num = int(m['num'])
             if last_track_num + 1 != track_num:
                 raise NotSupportedTOCError(f'Non consecutive track numbers ({last_track_num} => {track_num}) in dBPoweramp log. Likely a partial rip, disc ID cannot be calculated')

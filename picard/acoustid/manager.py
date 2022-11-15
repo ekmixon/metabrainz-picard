@@ -79,8 +79,7 @@ class Submission(object):
         }
         metadata = self.metadata
         if metadata:
-            puid = metadata['musicip_puid']
-            if puid:
+            if puid := metadata['musicip_puid']:
                 args['puid'] = puid
         if self.valid_duration and self.recordingid:
             args['mbid'] = self.recordingid
@@ -134,8 +133,7 @@ class AcoustIDManager(QtCore.QObject):
         self._check_unsubmitted()
 
     def is_submitted(self, file):
-        submission = self._submissions.get(file)
-        if submission:
+        if submission := self._submissions.get(file):
             return submission.is_submitted
         return True
 

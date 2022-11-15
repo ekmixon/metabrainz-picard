@@ -241,9 +241,11 @@ class ReleasesOptionsPage(OptionsPage):
 
     def save(self):
         config = get_config()
-        scores = []
-        for (release_type, release_type_slider) in self._release_type_sliders.items():
-            scores.append((release_type, release_type_slider.value()))
+        scores = [
+            (release_type, release_type_slider.value())
+            for release_type, release_type_slider in self._release_type_sliders.items()
+        ]
+
         config.setting["release_type_scores"] = scores
 
         self._save_list_items("preferred_release_countries", self.ui.preferred_country_list)

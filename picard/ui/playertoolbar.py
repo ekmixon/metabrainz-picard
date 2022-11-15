@@ -257,10 +257,7 @@ class PlayerToolbar(QtWidgets.QToolBar):
             return 'bottom'
         pos = self.mapToParent(QtCore.QPoint(0, 0))
         half_main_window_height = self.parent().height() / 2
-        if pos.y() <= half_main_window_height:
-            return 'bottom'
-        else:
-            return 'top'
+        return 'bottom' if pos.y() <= half_main_window_height else 'top'
 
 
 class PlaybackProgressSlider(QtWidgets.QWidget):

@@ -119,10 +119,7 @@ class Popover(QtWidgets.QFrame):
     def update_position(self):
         parent = self.parent()
         x = -(self.width() - parent.width()) / 2
-        if self.position == 'top':
-            y = -self.height()
-        else:  # bottom
-            y = parent.height()
+        y = -self.height() if self.position == 'top' else parent.height()
         pos = QtCore.QPoint(int(x), int(y))
         pos = parent.mapToGlobal(pos)
         if not self._is_wayland:

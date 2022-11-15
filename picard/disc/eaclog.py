@@ -70,10 +70,10 @@ def filter_toc_entries(lines):
             break
 
     for line in lines:
-        m = RE_TOC_TABLE_LINE.search(line)
-        if not m:
+        if m := RE_TOC_TABLE_LINE.search(line):
+            yield TocEntry(int(m['num']), int(m['start_sector']), int(m['end_sector']))
+        else:
             break
-        yield TocEntry(int(m['num']), int(m['start_sector']), int(m['end_sector']))
 
 
 def toc_from_file(path):

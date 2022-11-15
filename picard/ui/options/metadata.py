@@ -347,8 +347,7 @@ class ScriptExceptionSelector(PicardDialog):
 
     def set_weighting_selector(self):
         row = self.ui.selected_scripts.currentRow()
-        selected_item = self.ui.selected_scripts.item(row)
-        if selected_item:
+        if selected_item := self.ui.selected_scripts.item(row):
             weighting = selected_item.data(QtCore.Qt.ItemDataRole.UserRole)[1]
         else:
             weighting = 0
@@ -356,8 +355,7 @@ class ScriptExceptionSelector(PicardDialog):
 
     def set_item_from_weighting(self):
         row = self.ui.selected_scripts.currentRow()
-        selected_item = self.ui.selected_scripts.item(row)
-        if selected_item:
+        if selected_item := self.ui.selected_scripts.item(row):
             item_data = selected_item.data(QtCore.Qt.ItemDataRole.UserRole)
             weighting = self.ui.weighting_selector.value()
             new_data = (item_data[0], weighting)

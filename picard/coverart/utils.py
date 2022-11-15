@@ -29,25 +29,23 @@ from picard.const import MB_ATTRIBUTES
 
 # list of types from http://musicbrainz.org/doc/Cover_Art/Types
 # order of declaration is preserved in selection box
-CAA_TYPES = []
-for k, v in sorted(MB_ATTRIBUTES.items(), key=lambda k_v: k_v[0]):
-    if k.startswith('DB:cover_art_archive.art_type/name:'):
-        CAA_TYPES.append({'name': v.lower(), 'title': v})
+CAA_TYPES = [
+    {'name': v.lower(), 'title': v}
+    for k, v in sorted(MB_ATTRIBUTES.items(), key=lambda k_v: k_v[0])
+    if k.startswith('DB:cover_art_archive.art_type/name:')
+]
 
 # pseudo type, used for the no type case
 CAA_TYPES.append({'name': "unknown", 'title': N_("Unknown")})
 
-CAA_TYPES_TR = {}
-for t in CAA_TYPES:
-    CAA_TYPES_TR[t['name']] = t['title']
+CAA_TYPES_TR = {t['name']: t['title'] for t in CAA_TYPES}
 
 
 def translate_caa_type(name):
     if name == 'unknown':
         return _(CAA_TYPES_TR[name])
-    else:
-        title = CAA_TYPES_TR.get(name, name)
-        return pgettext_attributes("cover_art_type", title)
+    title = CAA_TYPES_TR.get(name, name)
+    return pgettext_attributes("cover_art_type", title)
 
 
 # See https://id3.org/id3v2.4.0-frames, 4.14 Attached picture

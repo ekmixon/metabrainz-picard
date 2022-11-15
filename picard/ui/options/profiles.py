@@ -100,11 +100,14 @@ class ProfilesOptionsPage(OptionsPage):
         """Process selected events.
         """
         event_type = event.type()
-        if event_type == QtCore.QEvent.Type.FocusOut and object == self.ui.settings_tree:
-            if self.settings_changed:
-                self.settings_changed = False
-                self.update_values_in_profile_options()
-                self.reload_all_page_settings()
+        if (
+            event_type == QtCore.QEvent.Type.FocusOut
+            and object == self.ui.settings_tree
+            and self.settings_changed
+        ):
+            self.settings_changed = False
+            self.update_values_in_profile_options()
+            self.reload_all_page_settings()
         return False
 
     def make_buttons(self):
@@ -245,9 +248,7 @@ class ProfilesOptionsPage(OptionsPage):
         if value in config.setting["file_renaming_scripts"]:
             return config.setting["file_renaming_scripts"][value]["title"]
         presets = {x["id"]: x["title"] for x in get_file_naming_script_presets()}
-        if value in presets:
-            return presets[value]
-        return _("Unknown script")
+        return presets[value] if value in presets else _("Unknown script")
 
     def _get_scripts_list(self, config, key, template, none_text):
         if not config.setting[key]:
@@ -260,7 +261,7 @@ class ProfilesOptionsPage(OptionsPage):
                 flag = True
                 value_text += template % name
         if not flag:
-            value_text += " %s" % none_text
+            value_text += f" {none_text}"
         return value_text
 
     def _get_ca_providers_list(self, config, key, template, none_text):
@@ -272,7 +273,7 @@ class ProfilesOptionsPage(OptionsPage):
                 flag = True
                 value_text += template % name
         if not flag:
-            value_text += " %s" % none_text
+            value_text += f" {none_text}"
         return value_text
 
     def make_setting_value_text(self, key, value):
@@ -312,10 +313,7 @@ class ProfilesOptionsPage(OptionsPage):
         Returns:
             ProfileListWidgetItem: Currently selected item
         """
-        items = self.ui.profile_list.selectedItems()
-        if items:
-            return items[0]
-        return None
+        return items[0] if (items := self.ui.profile_list.selectedItems()) else None
 
     def profile_selected(self, update_settings=True):
         """Update working profile information for the selected item in the profiles list.
@@ -323,8 +321,7 @@ class ProfilesOptionsPage(OptionsPage):
         Args:
             update_settings (bool, optional): Update settings tree. Defaults to True.
         """
-        item = self.get_current_selected_item()
-        if item:
+        if item := self.get_current_selected_item():
             id = item.profile_id
             self.current_profile_id = id
             if update_settings:
@@ -423,7 +420,7 @@ class ProfilesOptionsPage(OptionsPage):
         id = str(uuid.uuid4())
         settings = deepcopy(self.profile_settings[self.current_profile_id])
         self.profile_settings[id] = settings
-        base_title = "%s %s" % (get_base_title(item.name), _(DEFAULT_COPY_TEXT))
+        base_title = f"{get_base_title(item.name)} {_(DEFAULT_COPY_TEXT)}"
         name = self.ui.profile_list.unique_profile_name(base_title)
         self.ui.profile_list.add_profile(name=name, profile_id=id)
         self.update_config_overrides()
@@ -452,7 +449,7 @@ class ProfilesOptionsPage(OptionsPage):
             list: List of profiles suitable for storing in `config.profiles`.
         """
         all_profiles = list(self._all_profiles())
-        all_profile_ids = set(x['id'] for x in all_profiles)
+        all_profile_ids = {x['id'] for x in all_profiles}
         keys = set(self.profile_settings.keys())
         # Add any missing profile settings
         for id in all_profile_ids.difference(keys):

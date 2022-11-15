@@ -56,8 +56,7 @@ class Version(namedtuple('VersionBase', 'major minor patch identifier revision')
 
     @classmethod
     def from_string(cls, version_str):
-        match = cls._version_re.search(version_str)
-        if match:
+        if match := cls._version_re.search(version_str):
             (major, minor, patch, identifier, revision) = match.groups()
             major = int(major)
             if minor is None:
@@ -83,15 +82,16 @@ class Version(namedtuple('VersionBase', 'major minor patch identifier revision')
         else:
             version = self
         if short and version.identifier == 'final':
-            if version.patch == 0:
-                version_str = '%d.%d' % version[:2]
-            else:
-                version_str = '%d.%d.%d' % version[:3]
+            return (
+                '%d.%d' % version[:2]
+                if version.patch == 0
+                else '%d.%d.%d' % version[:3]
+            )
+
         elif short and version.identifier in {'a', 'b', 'rc'}:
-            version_str = '%d.%d.%d%s%d' % version
+            return '%d.%d.%d%s%d' % version
         else:
-            version_str = '%d.%d.%d.%s%d' % version
-        return version_str
+            return '%d.%d.%d.%s%d' % version
 
     @property
     def sortkey(self):

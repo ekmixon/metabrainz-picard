@@ -75,14 +75,14 @@ class ScriptingDocumentationWidget(QtWidgets.QWidget):
                 html = ''
             template = '<dt>%s%s</dt><dd>%s</dd>'
             if function.module is not None and function.module != 'picard.script.functions':
-                module = ' [' + function.module + ']'
+                module = f' [{function.module}]'
             else:
                 module = ''
             try:
                 firstline, remaining = html.split("\n", 1)
                 return template % (firstline, module, remaining)
             except ValueError:
-                return template % ("<code>$%s()</code>" % function.name, module, html)
+                return template % (f"<code>${function.name}()</code>", module, html)
 
         funcdoc = script_function_documentation_all(
             fmt='html',
@@ -95,12 +95,13 @@ class ScriptingDocumentationWidget(QtWidgets.QWidget):
             text_direction = 'ltr'
 
         html = DOCUMENTATION_HTML_TEMPLATE % {
-            'html': "<dl>%s</dl>" % funcdoc,
+            'html': f"<dl>{funcdoc}</dl>",
             'script_function_fg': theme.syntax_theme.func.name(),
             'monospace_font': FONT_FAMILY_MONOSPACE,
             'dir': text_direction,
-            'inline_start': 'right' if text_direction == 'rtl' else 'left'
+            'inline_start': 'right' if text_direction == 'rtl' else 'left',
         }
+
         # Scripting code is always left-to-right. Qt does not support the dir
         # attribute on inline tags, insert explicit left-right-marks instead.
         if text_direction == 'rtl':

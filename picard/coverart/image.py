@@ -68,7 +68,7 @@ from picard.util.filenaming import (
 from picard.util.scripttofilename import script_to_filename
 
 
-_datafiles = dict()
+_datafiles = {}
 _datafile_mutex = QMutex(QMutex.RecursionMode.Recursive)
 
 
@@ -155,10 +155,7 @@ class CoverArtImage:
 
     def __init__(self, url=None, types=None, comment='', data=None, support_types=None,
                  support_multi_types=None, id3_type=None):
-        if types is None:
-            self.types = []
-        else:
-            self.types = types
+        self.types = [] if types is None else types
         if url is not None:
             self.parse_url(url)
         else:
@@ -192,9 +189,9 @@ class CoverArtImage:
     @property
     def source(self):
         if self.url is not None:
-            return "%s: %s" % (self.sourceprefix, self.url.toString())
+            return f"{self.sourceprefix}: {self.url.toString()}"
         else:
-            return "%s" % self.sourceprefix
+            return f"{self.sourceprefix}"
 
     def is_front_image(self):
         """Indicates if image is considered as a 'front' image.
@@ -209,9 +206,7 @@ class CoverArtImage:
             return False
         if self.is_front is not None:
             return self.is_front
-        if 'front' in self.types:
-            return True
-        return (self.support_types is False)
+        return True if 'front' in self.types else (self.support_types is False)
 
     def imageinfo_as_string(self):
         if self.datahash is None:
@@ -229,39 +224,41 @@ class CoverArtImage:
             p.append("url=%r" % self.url.toString())
         if self.types:
             p.append("types=%r" % self.types)
-        p.append('support_types=%r' % self.support_types)
-        p.append('support_multi_types=%r' % self.support_types)
+        p.extend(
+            (
+                'support_types=%r' % self.support_types,
+                'support_multi_types=%r' % self.support_types,
+            )
+        )
+
         if self.is_front is not None:
             p.append("is_front=%r" % self.is_front)
         if self.comment:
             p.append("comment=%r" % self.comment)
-        return "%s(%s)" % (self.__class__.__name__, ", ".join(p))
+        return f'{self.__class__.__name__}({", ".join(p)})'
 
     def __str__(self):
         p = ['Image']
         if self.url is not None:
-            p.append("from %s" % self.url.toString())
+            p.append(f"from {self.url.toString()}")
         if self.types:
-            p.append("of type %s" % ','.join(self.types))
+            p.append(f"of type {','.join(self.types)}")
         if self.comment:
             p.append("and comment '%s'" % self.comment)
         return ' '.join(p)
 
     def __eq__(self, other):
         if self and other:
-            if self.support_types and other.support_types:
-                if self.support_multi_types and other.support_multi_types:
-                    return (self.datahash, self.types) == (other.datahash, other.types)
-                else:
-                    return (self.datahash, self.maintype) == (other.datahash, other.maintype)
-            else:
+            if not self.support_types or not other.support_types:
                 return self.datahash == other.datahash
+            if self.support_multi_types and other.support_multi_types:
+                return (self.datahash, self.types) == (other.datahash, other.types)
+            else:
+                return (self.datahash, self.maintype) == (other.datahash, other.maintype)
         return not self and not other
 
     def __hash__(self):
-        if self.datahash is None:
-            return 0
-        return hash(self.datahash.hash())
+        return 0 if self.datahash is None else hash(self.datahash.hash())
 
     def set_data(self, data):
         """Store image data in a file, if data already exists in such file
@@ -467,13 +464,12 @@ class TagCoverArtImage(CoverArtImage):
     @property
     def source(self):
         if self.tag:
-            return 'Tag %s from %s' % (self.tag, self.sourcefile)
+            return f'Tag {self.tag} from {self.sourcefile}'
         else:
-            return 'File %s' % (self.sourcefile)
+            return f'File {self.sourcefile}'
 
     def __repr__(self):
-        p = []
-        p.append('%r' % self.sourcefile)
+        p = ['%r' % self.sourcefile]
         if self.tag is not None:
             p.append("tag=%r" % self.tag)
         if self.types:
@@ -483,7 +479,7 @@ class TagCoverArtImage(CoverArtImage):
         p.append('support_types=%r' % self.support_types)
         if self.comment:
             p.append("comment=%r" % self.comment)
-        return "%s(%s)" % (self.__class__.__name__, ", ".join(p))
+        return f'{self.__class__.__name__}({", ".join(p)})'
 
 
 class LocalFileCoverArtImage(CoverArtImage):

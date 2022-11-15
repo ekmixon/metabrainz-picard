@@ -162,21 +162,17 @@ Translation: Picard will have problems with non-english characters
 
 def encode_filename(filename):
     """Encode unicode strings to filesystem encoding."""
-    if isinstance(filename, str):
-        if os.path.supports_unicode_filenames and sys.platform != "darwin":
-            return filename
-        else:
-            return filename.encode(_io_encoding, 'replace')
-    else:
+    if not isinstance(filename, str):
         return filename
+    if os.path.supports_unicode_filenames and sys.platform != "darwin":
+        return filename
+    else:
+        return filename.encode(_io_encoding, 'replace')
 
 
 def decode_filename(filename):
     """Decode strings from filesystem encoding to unicode."""
-    if isinstance(filename, str):
-        return filename
-    else:
-        return filename.decode(_io_encoding)
+    return filename if isinstance(filename, str) else filename.decode(_io_encoding)
 
 
 def _check_windows_min_version(major, build):
@@ -294,15 +290,13 @@ def sanitize_date(datestr):
 
 
 _re_win32_incompat = re.compile(r'["*:<>?|]', re.UNICODE)
-def replace_win32_incompat(string, repl="_"):  # noqa: E302
+def replace_win32_incompat(string, repl="_"):    # noqa: E302
     """Replace win32 filename incompatible characters from ``string`` by
        ``repl``."""
-    # Don't replace : with _ for windows drive
-    if IS_WIN and os.path.isabs(string):
-        drive, rest = ntpath.splitdrive(string)
-        return drive + _re_win32_incompat.sub(repl, rest)
-    else:
+    if not IS_WIN or not os.path.isabs(string):
         return _re_win32_incompat.sub(repl, string)
+    drive, rest = ntpath.splitdrive(string)
+    return drive + _re_win32_incompat.sub(repl, rest)
 
 
 _re_non_alphanum = re.compile(r'\W+', re.UNICODE)
@@ -335,11 +329,11 @@ def _reverse_sortname(sortname):
     """Reverse sortnames."""
     chunks = [a.strip() for a in sortname.split(",")]
     if len(chunks) == 2:
-        return "%s %s" % (chunks[1], chunks[0])
+        return f"{chunks[1]} {chunks[0]}"
     elif len(chunks) == 3:
-        return "%s %s %s" % (chunks[2], chunks[1], chunks[0])
+        return f"{chunks[2]} {chunks[1]} {chunks[0]}"
     elif len(chunks) == 4:
-        return "%s %s, %s %s" % (chunks[1], chunks[0], chunks[3], chunks[2])
+        return f"{chunks[1]} {chunks[0]}, {chunks[3]} {chunks[2]}"
     else:
         return sortname.strip()
 
@@ -371,7 +365,7 @@ def find_existing_path(path):
 
 
 def _add_windows_executable_extension(*executables):
-    return [e if e.endswith(('.py', '.exe')) else e + '.exe' for e in executables]
+    return [e if e.endswith(('.py', '.exe')) else f'{e}.exe' for e in executables]
 
 
 def find_executable(*executables):
@@ -432,9 +426,7 @@ def parse_amazon_url(url):
     """
     r = re.compile(r'^https?://(?:www.)?(?P<host>.*?)(?:\:[0-9]+)?/.*/(?P<asin>[0-9B][0-9A-Z]{9})(?:[^0-9A-Z]|$)')
     match = r.match(url)
-    if match is not None:
-        return match.groupdict()
-    return None
+    return match.groupdict() if match is not None else None
 
 
 def throttle(interval):
@@ -545,8 +537,7 @@ def tracknum_from_filename(base_filename):
     """
     filename, _ext = os.path.splitext(base_filename)
     for pattern in _tracknum_regexps:
-        match = pattern.search(filename)
-        if match:
+        if match := pattern.search(filename):
             n = int(match.group('number'))
             # Numbers above 1900 are often years, track numbers should be much
             # smaller even for extensive collections
@@ -632,9 +623,7 @@ def linear_combination_of_weights(parts):
             raise ValueError("Weight must be greater than or equal to 0.0")
         total += weight
         sum_of_products += value * weight
-    if total == 0.0:
-        return 0.0
-    return sum_of_products / total
+    return 0.0 if total == 0.0 else sum_of_products / total
 
 
 def album_artist_from_path(filename, album, artist):
@@ -891,10 +880,7 @@ def extract_year_from_date(dt):
     """ Extracts year from  passed in date either dict or string """
 
     try:
-        if isinstance(dt, Mapping):
-            return int(dt.get('year'))
-        else:
-            return parse(dt).year
+        return int(dt.get('year')) if isinstance(dt, Mapping) else parse(dt).year
     except (TypeError, ValueError):
         return None
 
@@ -933,7 +919,7 @@ def pattern_as_regex(pattern, allow_wildcards=False, flags=0):
             flags |= re.MULTILINE
         regex = plain_pattern[1:-1]
     elif allow_wildcards:
-        regex = '^' + wildcards_to_regex_pattern(pattern) + '$'
+        regex = f'^{wildcards_to_regex_pattern(pattern)}$'
     else:
         regex = re.escape(pattern)
     return re.compile(regex, flags)
@@ -975,10 +961,7 @@ def wildcards_to_regex_pattern(pattern):
                 group.append(c)
                 continue
         elif escape:
-            if c in {'*', '?', '\\', '[', ']'}:
-                part = '\\' + c
-            else:
-                part = re.escape('\\' + c)
+            part = '\\' + c if c in {'*', '?', '\\', '[', ']'} else re.escape('\\' + c)
             escape = False
         elif c == '\\':
             escape = True
@@ -997,8 +980,7 @@ def wildcards_to_regex_pattern(pattern):
     # There might be an unclosed character group. Interpret the starting
     # bracket of the group as a literal bracket and re-evaluate the rest.
     if group is not None:
-        regex.append('\\[')
-        regex.append(wildcards_to_regex_pattern(''.join(group[1:])))
+        regex.extend(('\\[', wildcards_to_regex_pattern(''.join(group[1:]))))
     return ''.join(regex)
 
 
@@ -1009,10 +991,7 @@ def _regex_numbered_title_fmt(fmt, title_repl, count_repl):
     parts = fmt.split(title_marker)
 
     def wrap_count(p):
-        if count_marker in p:
-            return '(?:' + re.escape(p) + ')?'
-        else:
-            return p
+        return f'(?:{re.escape(p)})?' if count_marker in p else p
 
     return (
         re.escape(title_marker).join(wrap_count(p) for p in parts)
@@ -1034,9 +1013,8 @@ def unique_numbered_title(default_title, existing_titles, fmt=None):
     regex = re.compile(regstr)
     count = 0
     for title in existing_titles:
-        m = regex.fullmatch(title)
-        if m:
-            num = m.group(1)
+        if m := regex.fullmatch(title):
+            num = m[1]
             if num is not None:
                 count = max(count, int(num))
             else:
@@ -1122,7 +1100,11 @@ def detect_unicode_encoding(path):
     """
     with open(path, 'rb') as f:
         first_bytes = f.read(4)
-        for bom, encoding in ENCODING_BOMS.items():
-            if first_bytes.startswith(bom):
-                return encoding
-        return 'utf-8'
+        return next(
+            (
+                encoding
+                for bom, encoding in ENCODING_BOMS.items()
+                if first_bytes.startswith(bom)
+            ),
+            'utf-8',
+        )

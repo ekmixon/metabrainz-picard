@@ -71,14 +71,12 @@ class _BitReader(object):
         if count < 0:
             raise ValueError
 
-        if count <= self._bits:
-            self.bits(count)
-        else:
+        if count > self._bits:
             count -= self.align()
             n_bytes = count // 8
             self._fileobj.seek(n_bytes, 1)
             count -= n_bytes * 8
-            self.bits(count)
+        self.bits(count)
 
     def get_position(self):
         """Returns the amount of bits read or skipped so far"""
