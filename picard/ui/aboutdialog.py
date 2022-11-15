@@ -52,13 +52,16 @@ class AboutDialog(PicardDialog, SingletonDialog):
     def _update_content(self):
         args = versions.as_dict(i18n=True)
 
-        args['third_parties_versions'] = ', '.join([
-            ("%s %s" % (versions.version_name(name), value))
-            .replace(' ', '&nbsp;')
-            .replace('-', '&#8209;')  # non-breaking hyphen
-            for name, value
-            in versions.as_dict(i18n=True).items()
-            if name != 'version'])
+        args['third_parties_versions'] = ', '.join(
+            [
+                f"{versions.version_name(name)} {value}".replace(
+                    ' ', '&nbsp;'
+                ).replace('-', '&#8209;')
+                for name, value in versions.as_dict(i18n=True).items()
+                if name != 'version'
+            ]
+        )
+
 
         args['formats'] = ", ".join(map(lambda x: x[1:], supported_extensions()))
         args['copyright_years'] = '2004-2022'
@@ -87,10 +90,10 @@ class AboutDialog(PicardDialog, SingletonDialog):
             'from <a href="https://www.flaticon.com">www.flaticon.com</a>')
 
         def strong(s):
-            return '<strong>' + s + '</strong>'
+            return f'<strong>{s}</strong>'
 
         def small(s):
-            return '<small>' + s + '</small>'
+            return f'<small>{s}</small>'
 
         def url(url, s=None):
             if s is None:

@@ -315,8 +315,7 @@ class Cluster(FileList):
             # Only used for grouping and to provide cluster title / artist - not added to file tags.
             album, artist = album_artist_from_path(file.filename, album, artist)
 
-            token = tokenize(album)
-            if token:
+            if token := tokenize(album):
                 cluster_list[token].add(album, artist or various_artists, file)
 
         yield from cluster_list.values()
@@ -430,4 +429,4 @@ _re_spaces = re.compile(r'\s', re.UNICODE)
 def tokenize(word):
     word = word.lower()
     token = _re_non_alphanum.sub('', word)
-    return token if token else _re_spaces.sub('', word)
+    return token or _re_spaces.sub('', word)

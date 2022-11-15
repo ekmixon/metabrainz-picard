@@ -186,11 +186,7 @@ class PluginTreeWidgetItem(HashableTreeWidgetItem):
             return super().__lt__(other)
 
         tree = self.treeWidget()
-        if not tree:
-            column = 0
-        else:
-            column = tree.sortColumn()
-
+        column = tree.sortColumn() if tree else 0
         return self.sortData(column) < other.sortData(column)
 
     def sortData(self, column):
@@ -265,10 +261,14 @@ class PluginsOptionsPage(OptionsPage):
             yield item
 
     def find_item_by_plugin_name(self, plugin_name):
-        for item in self.items():
-            if plugin_name == item.plugin.module_name:
-                return item
-        return None
+        return next(
+            (
+                item
+                for item in self.items()
+                if plugin_name == item.plugin.module_name
+            ),
+            None,
+        )
 
     def selected_item(self):
         try:
@@ -301,7 +301,7 @@ class PluginsOptionsPage(OptionsPage):
     @staticmethod
     def is_plugin_enabled(plugin):
         config = get_config()
-        return bool(plugin.module_name in config.setting["enabled_plugins"])
+        return plugin.module_name in config.setting["enabled_plugins"]
 
     def available_plugins_name_version(self):
         return {p.module_name: p.version for p in self.manager.available_plugins}
@@ -374,8 +374,7 @@ class PluginsOptionsPage(OptionsPage):
 
     def _preserve_plugins_states(self):
         self._preserve = {item.plugin.module_name: item.save_state() for item in self.items()}
-        item = self.selected_item()
-        if item:
+        if item := self.selected_item():
             self._preserve_selected = item.plugin.module_name
         else:
             self._preserve_selected = None
@@ -421,20 +420,17 @@ class PluginsOptionsPage(OptionsPage):
                 _("The plugin '%s' is not compatible with this version of Picard.") % plugin.name
             )
             return
-        item = self.find_item_by_plugin_name(plugin.module_name)
-        if item:
+        if item := self.find_item_by_plugin_name(plugin.module_name):
             self.update_plugin_item(item, plugin, make_current=True,
                                     enabled=True, is_installed=True)
         else:
             self._reload()
-            item = self.find_item_by_plugin_name(plugin.module_name)
-            if item:
+            if item := self.find_item_by_plugin_name(plugin.module_name):
                 self.set_current_item(item, scroll=True)
 
     def plugin_updated(self, plugin_name):
         log.debug("Plugin %r updated", plugin_name)
-        item = self.find_item_by_plugin_name(plugin_name)
-        if item:
+        if item := self.find_item_by_plugin_name(plugin_name):
             plugin = item.plugin
             QtWidgets.QMessageBox.information(
                 self,
@@ -448,8 +444,7 @@ class PluginsOptionsPage(OptionsPage):
 
     def plugin_removed(self, plugin_name):
         log.debug("Plugin %r removed", plugin_name)
-        item = self.find_item_by_plugin_name(plugin_name)
-        if item:
+        if item := self.find_item_by_plugin_name(plugin_name):
             if self.manager.is_available(plugin_name):
                 self.update_plugin_item(item, None, make_current=True,
                                         is_installed=False)
@@ -522,12 +517,7 @@ class PluginsOptionsPage(OptionsPage):
 
         install_enabled = not item.is_installed or bool(item.new_version)
         if item.upgrade_to_version:
-            if item.upgrade_to_version != item.new_version:
-                # case when a new version is known after a plugin was marked for update
-                install_enabled = True
-            else:
-                install_enabled = False
-
+            install_enabled = item.upgrade_to_version != item.new_version
         if install_enabled:
             if item.new_version is not None:
                 def download_and_update():
@@ -566,11 +556,7 @@ class PluginsOptionsPage(OptionsPage):
 
         actions_sort_score = 2
         if item.is_installed:
-            if item.is_enabled:
-                actions_sort_score = 0
-            else:
-                actions_sort_score = 1
-
+            actions_sort_score = 0 if item.is_enabled else 1
         item.setSortData(COLUMN_ACTIONS, actions_sort_score)
         item.setSortData(COLUMN_NAME, plugin.name.lower())
 
@@ -579,6 +565,7 @@ class PluginsOptionsPage(OptionsPage):
                 return int(elem)
             except ValueError:
                 return 0
+
         item.setSortData(COLUMN_VERSION, plugin.version)
 
         return item
@@ -606,9 +593,12 @@ class PluginsOptionsPage(OptionsPage):
             (_("License"), plugin.license),
             (_("Files"), escape(plugin.files_list)),
         ]
-        for label, value in infos:
-            if value:
-                text.append("<b>{0}:</b> {1}".format(label, value))
+        text.extend(
+            "<b>{0}:</b> {1}".format(label, value)
+            for label, value in infos
+            if value
+        )
+
         self.ui.details.setText("<p>{0}</p>".format("<br/>\n".join(text)))
 
     @staticmethod
@@ -617,8 +607,7 @@ class PluginsOptionsPage(OptionsPage):
         re_author = re.compile(r"(?P<author>.*?)\s*<(?P<email>.*?@.*?)>")
         for author in authors.split(','):
             author = author.strip()
-            match = re_author.fullmatch(author)
-            if match:
+            if match := re_author.fullmatch(author):
                 author_str = '<a href="mailto:{email}">{author}</a>'.format(
                     email=escape(match['email']),
                     author=escape(match['author']),
@@ -629,8 +618,7 @@ class PluginsOptionsPage(OptionsPage):
         return ', '.join(formatted_authors)
 
     def change_details(self):
-        item = self.selected_item()
-        if item:
+        if item := self.selected_item():
             self.refresh_details(item)
 
     def open_plugins(self):

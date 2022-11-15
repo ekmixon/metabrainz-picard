@@ -42,10 +42,7 @@ class AC3File(APEv2File):
             format = 'Enhanced AC-3'
         else:
             format = self.NAME
-        if file.tags:
-            metadata['~format'] = "%s (APEv2)" % format
-        else:
-            metadata['~format'] = format
+        metadata['~format'] = f"{format} (APEv2)" if file.tags else format
 
     def _save(self, filename, metadata):
         config = get_config()

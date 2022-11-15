@@ -97,10 +97,7 @@ class StackItem:
     def __init__(self, line, column, name=None):
         self.line = line
         self.column = column
-        if name is None:
-            self.name = None
-        else:
-            self.name = '$' + name
+        self.name = None if name is None else f'${name}'
 
     def __str__(self):
         if self.name is None:
@@ -123,9 +120,7 @@ class ScriptText(str):
 
 
 def normalize_tagname(name):
-    if name.startswith('_'):
-        return "~" + name[1:]
-    return name
+    return f"~{name[1:]}" if name.startswith('_') else name
 
 
 class ScriptVariable(object):
@@ -145,9 +140,8 @@ class ScriptFunction(object):
     def __init__(self, name, args, parser, column=0, line=0):
         self.stackitem = StackItem(line, column, name)
         try:
-            argnum_bound = parser.functions[name].argcount
-            argcount = len(args)
-            if argnum_bound:
+            if argnum_bound := parser.functions[name].argcount:
+                argcount = len(args)
                 too_few_args = argcount < argnum_bound.lower
                 if argnum_bound.upper is not None:
                     if argnum_bound.lower == argnum_bound.upper:
@@ -272,11 +266,7 @@ Grammar:
             result, ch = self.parse_expression(False)
             results.append(result)
             if ch == ')':
-                # Only an empty expression as first argument
-                # is the same as no argument given.
-                if len(results) == 1 and results[0] == []:
-                    return []
-                return results
+                return [] if len(results) == 1 and results[0] == [] else results
 
     def parse_function(self):
         start = self._pos
@@ -362,9 +352,7 @@ Grammar:
         return (tokens, ch)
 
     def load_functions(self):
-        self.functions = {}
-        for name, item in ScriptParser._function_registry:
-            self.functions[name] = item
+        self.functions = dict(ScriptParser._function_registry)
 
     def parse(self, script, functions=False):
         """Parse the script."""

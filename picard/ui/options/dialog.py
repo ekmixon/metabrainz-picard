@@ -280,12 +280,12 @@ class OptionsDialog(PicardDialog, SingletonDialog):
         for item in working_profiles:
             if item["enabled"]:
                 profile_id = item["id"]
-                profile_title = item["title"]
                 if profile_id in working_settings:
                     profile_settings = working_settings[profile_id]
                 else:
                     profile_settings = {}
                 if option_name in profile_settings:
+                    profile_title = item["title"]
                     tooltip = _("This option will be saved to profile: %s") % profile_title
                     try:
                         obj.setStyleSheet(style)
@@ -298,12 +298,11 @@ class OptionsDialog(PicardDialog, SingletonDialog):
         """Process selected events.
         """
         evtype = event.type()
-        if evtype == QtCore.QEvent.Type.Enter:
-            if self.first_enter:
-                self.first_enter = False
-                if self.tagger and self.tagger.window.script_editor_dialog is not None:
-                    self.get_page('filerenaming').show_script_editing_page()
-                    self.activateWindow()
+        if evtype == QtCore.QEvent.Type.Enter and self.first_enter:
+            self.first_enter = False
+            if self.tagger and self.tagger.window.script_editor_dialog is not None:
+                self.get_page('filerenaming').show_script_editing_page()
+                self.activateWindow()
         return False
 
     def get_page(self, name):
@@ -331,8 +330,7 @@ class OptionsDialog(PicardDialog, SingletonDialog):
         self.ui.pages_stack.setCurrentWidget(page)
 
     def switch_page(self):
-        items = self.ui.pages_tree.selectedItems()
-        if items:
+        if items := self.ui.pages_tree.selectedItems():
             config = get_config()
             page = self.item_to_page[items[0]]
             config.persist["options_last_active_page"] = page.NAME
@@ -396,16 +394,16 @@ class OptionsDialog(PicardDialog, SingletonDialog):
     @restore_method
     def restoreWindowState(self):
         config = get_config()
-        pages_tree_state = config.persist["options_pages_tree_state"]
-        if not pages_tree_state:
-            self.ui.pages_tree.expandAll()
-        else:
+        if pages_tree_state := config.persist["options_pages_tree_state"]:
             for page, is_expanded in pages_tree_state:
                 try:
                     item = self.page_to_item[page]
                 except KeyError:
                     continue
                 item.setExpanded(is_expanded)
+
+        else:
+            self.ui.pages_tree.expandAll()
 
     def restore_all_defaults(self):
         for page in self.pages:
@@ -477,10 +475,15 @@ class AttachedProfilesDialog(PicardDialog):
             option_item = QtGui.QStandardItem(_(title))
             option_item.setEditable(False)
             row = [option_item]
-            attached = []
-            for profile in self.profiles:
-                if name in self.settings[profile["id"]]:
-                    attached.append("{0}{1}".format(profile["title"], _(" [Enabled]") if profile["enabled"] else "",))
+            attached = [
+                "{0}{1}".format(
+                    profile["title"],
+                    _(" [Enabled]") if profile["enabled"] else "",
+                )
+                for profile in self.profiles
+                if name in self.settings[profile["id"]]
+            ]
+
             attached_profiles = "\n".join(attached) if attached else _("None")
             profile_item = QtGui.QStandardItem(attached_profiles)
             profile_item.setEditable(False)

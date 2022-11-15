@@ -78,8 +78,7 @@ class CoverArtThumbnail(ActiveLabel):
         self.data = None
         self.has_common_images = None
         self.release = None
-        window_handle = self.window().windowHandle()
-        if window_handle:
+        if window_handle := self.window().windowHandle():
             self.pixel_ratio = window_handle.screen().devicePixelRatio()
             window_handle.screenChanged.connect(self.screen_changed)
         else:
@@ -158,16 +157,15 @@ class CoverArtThumbnail(ActiveLabel):
                               url.toString(), len(dropped_data or ''))
                     self.image_dropped.emit(url, dropped_data)
 
-        if not accepted:
-            if mime_data.hasImage():
-                image_bytes = QtCore.QByteArray()
-                image_buffer = QtCore.QBuffer(image_bytes)
-                mime_data.imageData().save(image_buffer, 'JPEG')
-                dropped_data = bytes(image_bytes)
+        if not accepted and mime_data.hasImage():
+            image_bytes = QtCore.QByteArray()
+            image_buffer = QtCore.QBuffer(image_bytes)
+            mime_data.imageData().save(image_buffer, 'JPEG')
+            dropped_data = bytes(image_bytes)
 
-                accepted = True
-                log.debug("Dropped %d bytes of Qt image data", len(dropped_data))
-                self.image_dropped.emit(QtCore.QUrl(''), dropped_data)
+            accepted = True
+            log.debug("Dropped %d bytes of Qt image data", len(dropped_data))
+            self.image_dropped.emit(QtCore.QUrl(''), dropped_data)
 
         if accepted:
             event.acceptProposedAction()
@@ -319,9 +317,7 @@ class CoverArtThumbnail(ActiveLabel):
                 data = [metadata.images[0]]
         has_common_images = getattr(metadata, 'has_common_images', True)
         self.set_data(data, has_common_images=has_common_images)
-        release = None
-        if metadata:
-            release = metadata.get("musicbrainz_albumid", None)
+        release = metadata.get("musicbrainz_albumid", None) if metadata else None
         if release:
             self.setActive(True)
             text = _("View release on MusicBrainz")
@@ -335,7 +331,7 @@ class CoverArtThumbnail(ActiveLabel):
                 note = _('Tracks contain different images')
             if text:
                 text += '<br />'
-            text += '<i>%s</i>' % note
+            text += f'<i>{note}</i>'
         self.setToolTip(text)
         self.release = release
 
@@ -356,8 +352,7 @@ def set_image_append(obj, coverartimage):
 
 
 def iter_file_parents(file):
-    parent = file.parent
-    if parent:
+    if parent := file.parent:
         yield parent
         if isinstance(parent, Track) and parent.album:
             yield parent.album
@@ -409,11 +404,10 @@ class CoverArtBox(QtWidgets.QGroupBox):
                 # If the Cover art box is hidden and selection is updated
                 # we should not update the display of child widgets
                 return
-            else:
-                # Coverart box display was toggled.
-                # Update the pixmaps and display them
-                self.cover_art.show()
-                self.orig_cover_art.show()
+            # Coverart box display was toggled.
+            # Update the pixmaps and display them
+            self.cover_art.show()
+            self.orig_cover_art.show()
 
         # We want to show the 2 coverarts only if they are different
         # and orig_cover_art data is set and not the default cd shadow
@@ -471,10 +465,7 @@ class CoverArtBox(QtWidgets.QGroupBox):
                 queryargs = dict(query.queryItems())
             else:
                 queryargs = {}
-            if url.scheme() == 'https':
-                port = 443
-            else:
-                port = 80
+            port = 443 if url.scheme() == 'https' else 80
             self.tagger.webservice.get(url.host(), url.port(port), path,
                                        partial(self.on_remote_image_fetched, url, fallback_data=fallback_data),
                                        parse_response_type=None, queryargs=queryargs,
@@ -528,16 +519,15 @@ class CoverArtBox(QtWidgets.QGroupBox):
             self._try_load_remote_image(url, data)
             return
         except CoverArtImageError as e:
-            log.debug("Unable to identify dropped data format: %s" % e)
+            log.debug(f"Unable to identify dropped data format: {e}")
 
         # Try getting image out of HTML (e.g. for Google image search detail view)
         try:
             html = data.decode()
-            match = re.search(HTML_IMG_SRC_REGEX, html)
-            if match:
-                url = QtCore.QUrl(match.group(1))
+            if match := re.search(HTML_IMG_SRC_REGEX, html):
+                url = QtCore.QUrl(match[1])
         except UnicodeDecodeError as e:
-            log.warning("Unable to decode dropped data format: %s" % e)
+            log.warning(f"Unable to decode dropped data format: {e}")
         else:
             log.debug("Trying URL parsed from HTML: %s", url.toString())
             self.fetch_remote_image(url)
@@ -610,15 +600,14 @@ class CoverArtBox(QtWidgets.QGroupBox):
 
     def choose_local_file(self):
         file_chooser = QtWidgets.QFileDialog(self)
-        extensions = ['*' + ext for ext in imageinfo.get_supported_extensions()]
+        extensions = [f'*{ext}' for ext in imageinfo.get_supported_extensions()]
         extensions.sort()
         file_chooser.setNameFilters([
             _("All supported image formats") + " (" + " ".join(extensions) + ")",
             _("All files") + " (*)",
         ])
         if file_chooser.exec_():
-            file_urls = file_chooser.selectedUrls()
-            if file_urls:
+            if file_urls := file_chooser.selectedUrls():
                 self.fetch_remote_image(file_urls[0])
 
     def set_load_image_behavior(self, behavior):

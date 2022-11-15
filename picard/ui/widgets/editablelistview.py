@@ -120,7 +120,7 @@ class EditableListView(QtWidgets.QListView):
 
     def select_key(self, value):
         model = self.model()
-        for row in range(0, model.rowCount()):
+        for row in range(model.rowCount()):
             index = model.createIndex(row, 0)
             if value == index.data(QtCore.Qt.ItemDataRole.EditRole):
                 self.setCurrentIndex(index)
@@ -147,8 +147,7 @@ class UniqueEditableListView(EditableListView):
         self._is_drag_drop = False
 
     def setModel(self, model):
-        current_model = self.model()
-        if current_model:
+        if current_model := self.model():
             current_model.dataChanged.disconnect(self.on_data_changed)
         super().setModel(model)
         model.dataChanged.connect(self.on_data_changed)
@@ -252,7 +251,7 @@ class EditableListModel(QtCore.QAbstractListModel):
 
     def insertRows(self, row, count, parent=QtCore.QModelIndex()):
         super().beginInsertRows(parent, row, row + count - 1)
-        for i in range(count):
+        for _ in range(count):
             self._items.insert(row, ("", ""))
         super().endInsertRows()
         return True

@@ -104,8 +104,7 @@ def _create_artist_node_dict(source_node):
 
 def _copy_artist_nodes(source, target_node):
     for credit in target_node['artist-credit']:
-        artist_node = source.get(credit['artist']['id'])
-        if artist_node:
+        if artist_node := source.get(credit['artist']['id']):
             credit['artist'] = artist_node
 
 
@@ -181,8 +180,7 @@ class Album(DataObject, Item):
         self._discids.add(discid)
         for track in self.tracks:
             medium_discids = track.metadata.getall('~musicbrainz_discids')
-            track_discids = list(self._discids.intersection(medium_discids))
-            if track_discids:
+            if track_discids := list(self._discids.intersection(medium_discids)):
                 track.metadata['musicbrainz_discid'] = track_discids
                 track.update()
                 for file in track.files:
@@ -346,8 +344,7 @@ class Album(DataObject, Item):
             self._finalize_loading(error)
         else:
             for recording in document.get('recordings', []):
-                recording_id = recording.get('id')
-                if recording_id:
+                if recording_id := recording.get('id'):
                     self._recordings_map[recording_id] = recording
             count = document.get('recording-count', 0)
             offset = document.get('recording-offset', 0)
@@ -364,14 +361,14 @@ class Album(DataObject, Item):
 
     def _merge_recording_relationships(self, track_node):
         if 'relations' not in track_node['recording']:
-            recording = self._recordings_map.get(track_node['recording']['id'])
-            if recording:
+            if recording := self._recordings_map.get(
+                track_node['recording']['id']
+            ):
                 track_node['recording']['relations'] = recording.get('relations', [])
 
     def _merge_release_recording_relationships(self):
         for medium_node in self._release_node['media']:
-            pregap_node = medium_node.get('pregap')
-            if pregap_node:
+            if pregap_node := medium_node.get('pregap'):
                 self._merge_recording_relationships(pregap_node)
 
             for track_node in medium_node.get('tracks', []):
@@ -613,11 +610,11 @@ class Album(DataObject, Item):
                 'url-rels',
                 'work-rels'
             }
-            if config.setting['track_ars']:
-                inc |= {
-                    'recording-level-rels',
-                    'work-level-rels',
-                }
+        if config.setting['track_ars']:
+            inc |= {
+                'recording-level-rels',
+                'work-level-rels',
+            }
         require_authentication = self.set_genre_inc_params(inc, config) or require_authentication
         if config.setting['enable_ratings']:
             require_authentication = True
@@ -779,13 +776,19 @@ class Album(DataObject, Item):
         return any(self._iter_unsaved_files())
 
     def get_num_unsaved_files(self):
-        return sum(1 for file in self._iter_unsaved_files())
+        return sum(1 for _ in self._iter_unsaved_files())
 
     def _iter_unsaved_files(self):
         yield from (file for file in self.iterfiles(save=True) if not file.is_saved())
 
     def column(self, column):
-        if column == 'title':
+        if column == 'artist':
+            return self.metadata['albumartist']
+        elif column == 'covercount':
+            return self.cover_art_description()
+        elif column == 'discnumber':
+            return self.metadata['totaldiscs']
+        elif column == 'title':
             if self.status == AlbumStatus.LOADING:
                 title = _("[loading album information]")
             elif self.status == AlbumStatus.ERROR:
@@ -793,35 +796,21 @@ class Album(DataObject, Item):
             else:
                 title = self.metadata['album']
 
-            if self.tracks:
-                elems = ['%d/%d' % (self.get_num_matched_tracks(), len(self.tracks))]
-                unmatched = self.get_num_unmatched_files()
-                if unmatched:
-                    elems.append('%d?' % (unmatched,))
-                unsaved = self.get_num_unsaved_files()
-                if unsaved:
-                    elems.append('%d*' % (unsaved,))
-                ca_detailed = self.cover_art_description_detailed()
-                if ca_detailed:
-                    elems.append(ca_detailed)
-
-                return '%s\u200E (%s)' % (title, '; '.join(elems))
-            else:
+            if not self.tracks:
                 return title
-        elif column == '~length':
-            length = self.metadata.length
-            if length:
-                return format_time(length)
-            else:
-                return ''
-        elif column == 'artist':
-            return self.metadata['albumartist']
+            elems = ['%d/%d' % (self.get_num_matched_tracks(), len(self.tracks))]
+            if unmatched := self.get_num_unmatched_files():
+                elems.append('%d?' % (unmatched,))
+            if unsaved := self.get_num_unsaved_files():
+                elems.append('%d*' % (unsaved,))
+            if ca_detailed := self.cover_art_description_detailed():
+                elems.append(ca_detailed)
+
+            return '%s\u200E (%s)' % (title, '; '.join(elems))
         elif column == 'tracknumber':
             return self.metadata['~totalalbumtracks']
-        elif column == 'discnumber':
-            return self.metadata['totaldiscs']
-        elif column == 'covercount':
-            return self.cover_art_description()
+        elif column == '~length':
+            return format_time(length) if (length := self.metadata.length) else ''
         else:
             return self.metadata[column]
 
@@ -830,8 +819,7 @@ class Album(DataObject, Item):
             return
         for file in list(self.iterfiles(True)):
             file.move(self.unmatched_files)
-        album = self.tagger.albums.get(mbid)
-        if album:
+        if album := self.tagger.albums.get(mbid):
             album.match_files(self.unmatched_files.files)
             album.update()
             self.tagger.remove_album(self)

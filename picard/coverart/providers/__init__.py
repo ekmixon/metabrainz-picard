@@ -83,7 +83,7 @@ def cover_art_providers():
 
     def label(p):
         checked = 'x' if order[p.name].enabled else ' '
-        return "%s [%s]" % (p.name, checked)
+        return f"{p.name} [{checked}]"
 
     log.debug("CA Providers order: %s", ' > '.join(label(p) for p in ordered_providers))
 

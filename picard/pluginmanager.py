@@ -70,9 +70,7 @@ def is_update(path):
 
 
 def strip_update_suffix(path):
-    if not is_update(path):
-        return path
-    return path[:-_UPDATE_SUFFIX_LEN]
+    return path[:-_UPDATE_SUFFIX_LEN] if is_update(path) else path
 
 
 def is_zip(path):
@@ -80,9 +78,7 @@ def is_zip(path):
 
 
 def strip_zip_suffix(path):
-    if not is_zip(path):
-        return path
-    return path[:-4]
+    return path[:-4] if is_zip(path) else path
 
 
 def is_package(path):
@@ -90,23 +86,18 @@ def is_package(path):
 
 
 def strip_package_suffix(path):
-    if not is_package(path):
-        return path
-    return path[:-_PLUGIN_PACKAGE_SUFFIX_LEN]
+    return path[:-_PLUGIN_PACKAGE_SUFFIX_LEN] if is_package(path) else path
 
 
 def is_zipped_package(path):
-    return path.endswith(_PLUGIN_PACKAGE_SUFFIX + '.zip')
+    return path.endswith(f'{_PLUGIN_PACKAGE_SUFFIX}.zip')
 
 
 def _plugin_name_from_path(path):
     path = os.path.normpath(path)
     if is_zip(path):
         name = os.path.basename(strip_zip_suffix(path))
-        if is_package(name):
-            return strip_package_suffix(name)
-        else:
-            return name
+        return strip_package_suffix(name) if is_package(name) else name
     elif os.path.isdir(path):
         for entry in _PACKAGE_ENTRIES:
             if os.path.isfile(os.path.join(path, entry)):
@@ -116,9 +107,7 @@ def _plugin_name_from_path(path):
         if file in _PACKAGE_ENTRIES:
             return None
         name, ext = os.path.splitext(file)
-        if ext in _SUFFIXES:
-            return name
-        return None
+        return name if ext in _SUFFIXES else None
 
 
 def load_manifest(archive_path):
@@ -189,8 +178,7 @@ class PluginManager(QtCore.QObject):
             if file.endswith(_UPDATE_SUFFIX):
                 source_path = os.path.join(self.plugins_directory, file)
                 target_path = strip_update_suffix(source_path)
-                plugin_name = _plugin_name_from_path(target_path)
-                if plugin_name:
+                if plugin_name := _plugin_name_from_path(target_path):
                     yield (source_path, target_path, plugin_name)
                 else:
                     log.error('Cannot get plugin name from %r', source_path)
@@ -213,8 +201,7 @@ class PluginManager(QtCore.QObject):
         # now load found plugins
         names = set()
         for path in (os.path.join(plugindir, file) for file in os.listdir(plugindir)):
-            name = _plugin_name_from_path(path)
-            if name:
+            if name := _plugin_name_from_path(path):
                 names.add(name)
         log.debug("Looking for plugins in directory %r, %d names found",
                   plugindir,
@@ -226,14 +213,18 @@ class PluginManager(QtCore.QObject):
                 self.plugin_error(name, _("Unable to load plugin '%s'"), name, log_func=log.exception)
 
     def _get_plugin_index_by_name(self, name):
-        for index, plugin in enumerate(self.plugins):
-            if name == plugin.module_name:
-                return (plugin, index)
-        return (None, None)
+        return next(
+            (
+                (plugin, index)
+                for index, plugin in enumerate(self.plugins)
+                if name == plugin.module_name
+            ),
+            (None, None),
+        )
 
     def _load_plugin_from_directory(self, name, plugindir):
         module_file = None
-        zipfilename = os.path.join(plugindir, name + '.zip')
+        zipfilename = os.path.join(plugindir, f'{name}.zip')
         (zip_importer, module_name, manifest_data) = zip_import(zipfilename)
         if zip_importer:
             name = module_name
@@ -270,8 +261,9 @@ class PluginManager(QtCore.QObject):
                 plugin_module = imp.load_module(full_module_name, *info)
             plugin = PluginWrapper(plugin_module, plugindir,
                                    file=module_pathname, manifest_data=manifest_data)
-            compatible_versions = _compatible_api_versions(plugin.api_versions)
-            if compatible_versions:
+            if compatible_versions := _compatible_api_versions(
+                plugin.api_versions
+            ):
                 log.debug("Loading plugin %r version %s, compatible with API: %s",
                           plugin.name,
                           plugin.version,
@@ -340,7 +332,7 @@ class PluginManager(QtCore.QObject):
 
     def _install_plugin_zip(self, plugin_name, plugin_data, update=False):
         # zipped module from download
-        zip_plugin = plugin_name + '.zip'
+        zip_plugin = f'{plugin_name}.zip'
         dst = os.path.join(self.plugins_directory, zip_plugin)
         if update:
             dst += _UPDATE_SUFFIX
@@ -404,7 +396,7 @@ class PluginManager(QtCore.QObject):
                 try:
                     installed_plugin = self._load_plugin_from_directory(plugin_name, self.plugins_directory)
                     if not installed_plugin:
-                        raise RuntimeError("Failed loading newly installed plugin %s" % plugin_name)
+                        raise RuntimeError(f"Failed loading newly installed plugin {plugin_name}")
                 except Exception as e:
                     log.error("Unable to load plugin '%s': %s", plugin_name, e)
                     self._remove_plugin(plugin_name)

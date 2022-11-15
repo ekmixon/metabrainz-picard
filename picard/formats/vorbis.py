@@ -138,10 +138,10 @@ class VCommentFile(File):
         for origname, values in file.tags.items():
             for value in values:
                 name = origname
-                if name == "date" or name == "originaldate":
+                if name in ["date", "originaldate"]:
                     # YYYY-00-00 => YYYY
                     value = sanitize_date(value)
-                elif name == 'performer' or name == 'comment':
+                elif name in ['performer', 'comment']:
                     # transform "performer=Joe Barr (Piano)" to "performer:Piano=Joe Barr"
                     name += ':'
                     if value.endswith(')'):
@@ -246,12 +246,13 @@ class VCommentFile(File):
         if config.setting["clear_existing_tags"]:
             preserve_tags = ['waveformatextensible_channel_mask']
             if not is_flac and config.setting["preserve_images"]:
-                preserve_tags.append('metadata_block_picture')
-                preserve_tags.append('coverart')
-            preserved_values = {}
-            for name in preserve_tags:
-                if name in file.tags and file.tags[name]:
-                    preserved_values[name] = file.tags[name]
+                preserve_tags.extend(('metadata_block_picture', 'coverart'))
+            preserved_values = {
+                name: file.tags[name]
+                for name in preserve_tags
+                if name in file.tags and file.tags[name]
+            }
+
             file.tags.clear()
             for name, value in preserved_values.items():
                 file.tags[name] = value
@@ -264,29 +265,26 @@ class VCommentFile(File):
 
         for name, value in metadata.items():
             if name == '~rating':
-                # Save rating according to http://code.google.com/p/quodlibet/wiki/Specs_VorbisComments
-                user_email = sanitize_key(config.setting['rating_user_email'])
-                if user_email:
-                    name = 'rating:%s' % user_email
+                if user_email := sanitize_key(config.setting['rating_user_email']):
+                    name = f'rating:{user_email}'
                 else:
                     name = 'rating'
                 value = str(float(value) / (config.setting['rating_steps'] - 1))
-            # don't save private tags
             elif name.startswith("~") or not self.supports_tag(name):
                 continue
             elif name.startswith('lyrics:'):
                 name = 'lyrics'
-            elif name == "date" or name == "originaldate":
+            elif name in ["date", "originaldate"]:
                 # YYYY-00-00 => YYYY
                 value = sanitize_date(value)
             elif name.startswith('performer:') or name.startswith('comment:'):
                 # transform "performer:Piano=Joe Barr" to "performer=Joe Barr (Piano)"
                 name, desc = name.split(':', 1)
                 if desc:
-                    value += ' (%s)' % desc
+                    value += f' ({desc})'
             elif name == "musicip_fingerprint":
                 name = "fingerprint"
-                value = "MusicMagic Fingerprint%s" % value
+                value = f"MusicMagic Fingerprint{value}"
             elif name in self.__rtranslate:
                 name = self.__rtranslate[name]
             tags.setdefault(name.upper(), []).append(value)
@@ -361,7 +359,7 @@ class VCommentFile(File):
         if name == '~rating':
             config = get_config()
             if config.setting['rating_user_email']:
-                return 'rating:%s' % config.setting['rating_user_email']
+                return f"rating:{config.setting['rating_user_email']}"
             else:
                 return 'rating'
         elif name.startswith("~"):
@@ -443,9 +441,7 @@ class OggOpusFile(VCommentFile):
 
     @classmethod
     def supports_tag(cls, name):
-        if name.startswith('r128_'):
-            return True
-        return VCommentFile.supports_tag(name)
+        return True if name.startswith('r128_') else VCommentFile.supports_tag(name)
 
 
 def OggAudioFile(filename):

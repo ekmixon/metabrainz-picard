@@ -252,8 +252,7 @@ class ASFFile(File):
                 self.__casemap[name] = orig_name
             else:
                 continue
-            values = [str(value) for value in values if value]
-            if values:
+            if values := [str(value) for value in values if value]:
                 metadata[name] = values
         self._info(metadata, file)
         return metadata
@@ -282,7 +281,7 @@ class ASFFile(File):
             elif name == '~rating':
                 values = [int(values[0]) * 99 // (config.setting['rating_steps'] - 1)]
             elif name == 'discnumber' and 'totaldiscs' in metadata:
-                values = ['%s/%s' % (metadata['discnumber'], metadata['totaldiscs'])]
+                values = [f"{metadata['discnumber']}/{metadata['totaldiscs']}"]
             if name in self.__TRANS:
                 name = self.__TRANS[name]
             elif name in self.__TRANS_CI:

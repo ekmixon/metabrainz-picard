@@ -119,7 +119,7 @@ elif not (IS_MACOS or IS_HAIKU):
             def __init__(self, bus, app_id):
                 QObject.__init__(self)
                 self._bus = bus
-                self._app_uri = 'application://' + app_id
+                self._app_uri = f'application://{app_id}'
                 self._path = '/com/canonical/unity/launcherentry/1'
                 self._progress = 0
                 self._visible = False

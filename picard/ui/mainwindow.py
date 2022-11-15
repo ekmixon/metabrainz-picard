@@ -333,9 +333,9 @@ class MainWindow(QtWidgets.QMainWindow, PreserveGeometry):
 
     def show_quit_confirmation(self):
         unsaved_files = sum(a.get_num_unsaved_files() for a in self.tagger.albums.values())
-        QMessageBox = QtWidgets.QMessageBox
-
         if unsaved_files > 0:
+            QMessageBox = QtWidgets.QMessageBox
+
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Icon.Question)
             msg.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
@@ -451,12 +451,7 @@ class MainWindow(QtWidgets.QMainWindow, PreserveGeometry):
         translate = kwargs.get('translate', _)
         timeout = kwargs.get('timeout', 0)
         history = kwargs.get('history', log.history_info)
-        if len(args) == 1 and isdict(args[0]):
-            # named place holders
-            mparms = args[0]
-        else:
-            # simple place holders, ensure compatibility
-            mparms = args
+        mparms = args[0] if len(args) == 1 and isdict(args[0]) else args
         if message:
             if echo:
                 echo(message % mparms)
@@ -468,24 +463,26 @@ class MainWindow(QtWidgets.QMainWindow, PreserveGeometry):
         thread.to_main(self.statusBar().showMessage, message, timeout)
 
     def _on_submit_acoustid(self):
-        if self.tagger.use_acoustid:
-            config = get_config()
-            if not config.setting["acoustid_apikey"]:
-                msg = QtWidgets.QMessageBox(self)
-                msg.setIcon(QtWidgets.QMessageBox.Icon.Information)
-                msg.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
-                msg.setWindowTitle(_("AcoustID submission not configured"))
-                msg.setText(_(
-                    "You need to configure your AcoustID API key before you can submit fingerprints."))
-                open_options = QtWidgets.QPushButton(
-                    icontheme.lookup('preferences-desktop'), _("Open AcoustID options"))
-                msg.addButton(QtWidgets.QMessageBox.StandardButton.Cancel)
-                msg.addButton(open_options, QtWidgets.QMessageBox.ButtonRole.YesRole)
-                msg.exec_()
-                if msg.clickedButton() == open_options:
-                    self.show_options("fingerprinting")
-            else:
-                self.tagger.acoustidmanager.submit()
+        if not self.tagger.use_acoustid:
+            return
+        config = get_config()
+        if config.setting["acoustid_apikey"]:
+            self.tagger.acoustidmanager.submit()
+
+        else:
+            msg = QtWidgets.QMessageBox(self)
+            msg.setIcon(QtWidgets.QMessageBox.Icon.Information)
+            msg.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+            msg.setWindowTitle(_("AcoustID submission not configured"))
+            msg.setText(_(
+                "You need to configure your AcoustID API key before you can submit fingerprints."))
+            open_options = QtWidgets.QPushButton(
+                icontheme.lookup('preferences-desktop'), _("Open AcoustID options"))
+            msg.addButton(QtWidgets.QMessageBox.StandardButton.Cancel)
+            msg.addButton(open_options, QtWidgets.QMessageBox.ButtonRole.YesRole)
+            msg.exec_()
+            if msg.clickedButton() == open_options:
+                self.show_options("fingerprinting")
 
     @MainWindowActions.add()
     def _create_options_action(self):
@@ -966,14 +963,12 @@ class MainWindow(QtWidgets.QMainWindow, PreserveGeometry):
 
     def get_selected_or_unmatched_files(self):
         if self.selected_objects:
-            files = list(iter_files_from_objects(self.selected_objects))
-            if files:
+            if files := list(iter_files_from_objects(self.selected_objects)):
                 return files
         return self.tagger.unclustered_files.files
 
     def open_tags_from_filenames(self):
-        files = self.get_selected_or_unmatched_files()
-        if files:
+        if files := self.get_selected_or_unmatched_files():
             dialog = TagsFromFileNamesDialog(files, self)
             dialog.exec_()
 
@@ -1213,7 +1208,7 @@ class MainWindow(QtWidgets.QMainWindow, PreserveGeometry):
             self.search_action.trigger()
 
     def search_mbid_found(self, entity, mbid):
-        self.search_edit.setText('%s:%s' % (entity, mbid))
+        self.search_edit.setText(f'{entity}:{mbid}')
 
     def search(self):
         """Search for album, artist or track on the MusicBrainz website."""
@@ -1230,7 +1225,7 @@ class MainWindow(QtWidgets.QMainWindow, PreserveGeometry):
         formats = []
         extensions = []
         for exts, name in supported_formats():
-            exts = ["*" + e.lower() for e in exts]
+            exts = [f"*{e.lower()}" for e in exts]
             if not exts:
                 continue
             if not IS_MACOS and not IS_WIN:
@@ -1240,11 +1235,11 @@ class MainWindow(QtWidgets.QMainWindow, PreserveGeometry):
                 # full list twice. Hence only do this trick on other operating systems.
                 exts.extend([e.upper() for e in exts])
             exts.sort()
-            formats.append("%s (%s)" % (name, " ".join(exts)))
+            formats.append(f'{name} ({" ".join(exts)})')
             extensions.extend(exts)
         formats.sort()
         extensions.sort()
-        formats.insert(0, _("All supported formats") + " (%s)" % " ".join(extensions))
+        formats.insert(0, _("All supported formats") + f' ({" ".join(extensions)})')
         formats.insert(1, _("All files") + " (*)")
         files, _filter = QtWidgets.QFileDialog.getOpenFileNames(self, "", current_directory, ";;".join(formats))
         if files:
@@ -1258,17 +1253,16 @@ class MainWindow(QtWidgets.QMainWindow, PreserveGeometry):
 
         dir_list = []
         config = get_config()
-        if not config.setting["toolbar_multiselect"]:
-            directory = QtWidgets.QFileDialog.getExistingDirectory(self, "", current_directory)
-            if directory:
-                dir_list.append(directory)
-        else:
+        if config.setting["toolbar_multiselect"]:
             file_dialog = MultiDirsSelectDialog(self, "", current_directory)
             if file_dialog.exec_() == QtWidgets.QDialog.DialogCode.Accepted:
                 dir_list = file_dialog.selectedFiles()
 
-        dir_count = len(dir_list)
-        if dir_count:
+        elif directory := QtWidgets.QFileDialog.getExistingDirectory(
+            self, "", current_directory
+        ):
+            dir_list.append(directory)
+        if dir_count := len(dir_list):
             parent = os.path.dirname(dir_list[0]) if dir_count > 1 else dir_list[0]
             config.persist["current_directory"] = parent
             if dir_count > 1:
@@ -1391,10 +1385,9 @@ class MainWindow(QtWidgets.QMainWindow, PreserveGeometry):
         return ret == QtWidgets.QMessageBox.StandardButton.Yes
 
     def get_first_obj_with_type(self, type):
-        for obj in self.selected_objects:
-            if isinstance(obj, type):
-                return obj
-        return None
+        return next(
+            (obj for obj in self.selected_objects if isinstance(obj, type)), None
+        )
 
     def show_more_tracks(self):
         if not self.selected_objects:
@@ -1495,18 +1488,16 @@ class MainWindow(QtWidgets.QMainWindow, PreserveGeometry):
             _("Submitting releases to MusicBrainz requires the browser integration to be enabled. Do you want to enable the browser integration now?"),
             QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
             QtWidgets.QMessageBox.StandardButton.Yes)
-        if ret == QtWidgets.QMessageBox.StandardButton.Yes:
-            config = get_config()
-            config.setting["browser_integration"] = True
-            self.tagger.update_browser_integration()
-            if addrelease.is_enabled():
-                return True
-            else:
-                # Something went wrong, let the user configure browser integration manually
-                self.show_options("network")
-                return False
-        else:
+        if ret != QtWidgets.QMessageBox.StandardButton.Yes:
             return False
+        config = get_config()
+        config.setting["browser_integration"] = True
+        self.tagger.update_browser_integration()
+        if addrelease.is_enabled():
+            return True
+        # Something went wrong, let the user configure browser integration manually
+        self.show_options("network")
+        return False
 
     @throttle(100)
     def update_actions(self):
@@ -1727,10 +1718,12 @@ class MainWindow(QtWidgets.QMainWindow, PreserveGeometry):
 
     def paste(self):
         selected_objects = self.selected_objects
-        if not selected_objects:
-            target = self.tagger.unclustered_files
-        else:
-            target = selected_objects[0]
+        target = (
+            selected_objects[0]
+            if selected_objects
+            else self.tagger.unclustered_files
+        )
+
         self.paste_files(target)
         self.paste_action.setEnabled(False)
 
@@ -1773,7 +1766,7 @@ class MainWindow(QtWidgets.QMainWindow, PreserveGeometry):
         config = get_config()
         naming_scripts = config.setting["file_renaming_scripts"]
         naming_script_ids = set(naming_scripts.keys())
-        naming_script_ids |= set(item["id"] for item in get_file_naming_script_presets())
+        naming_script_ids |= {item["id"] for item in get_file_naming_script_presets()}
         profile_settings = deepcopy(config.profiles[SettingConfigSection.SETTINGS_KEY])
         for profile in config.profiles[SettingConfigSection.PROFILES_KEY]:
             p_id = profile["id"]
@@ -1786,15 +1779,17 @@ class MainWindow(QtWidgets.QMainWindow, PreserveGeometry):
                 )
                 profile_settings[p_id] = {}
             # Remove any invalid naming script ids from profiles
-            if script_id_key in profile_settings[p_id]:
-                if profile_settings[p_id][script_id_key] not in naming_script_ids:
-                    log.warning(
-                        "Removing invalid naming script id '%s' from profile '%s' (\"%s\")",
-                        profile_settings[p_id][script_id_key],
-                        p_id,
-                        profile["title"],
-                    )
-                    profile_settings[p_id][script_id_key] = None
+            if (
+                script_id_key in profile_settings[p_id]
+                and profile_settings[p_id][script_id_key] not in naming_script_ids
+            ):
+                log.warning(
+                    "Removing invalid naming script id '%s' from profile '%s' (\"%s\")",
+                    profile_settings[p_id][script_id_key],
+                    p_id,
+                    profile["title"],
+                )
+                profile_settings[p_id][script_id_key] = None
         config.profiles[SettingConfigSection.SETTINGS_KEY] = profile_settings
 
     def make_script_selector_menu(self):

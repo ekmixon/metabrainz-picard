@@ -99,9 +99,9 @@ class CoverArt:
         self.album._requests -= 1
 
         if error:
-            self.album.error_append('Coverart error: %s' % (http.errorString()))
+            self.album.error_append(f'Coverart error: {http.errorString()}')
         elif len(data) < 1000:
-            log.warning("Not enough data, skipping %s" % coverartimage)
+            log.warning(f"Not enough data, skipping {coverartimage}")
         else:
             self._message(
                 N_("Cover art of type '%(type)s' downloaded for %(albumid)s from %(host)s"),
@@ -146,12 +146,10 @@ class CoverArt:
                 try:
                     instance = provider.cls(self)
                     if provider.enabled and instance.enabled():
-                        log.debug("Trying cover art provider %s ..." %
-                                  provider.name)
+                        log.debug(f"Trying cover art provider {provider.name} ...")
                         ret = instance.queue_images()
                     else:
-                        log.debug("Skipping cover art provider %s ..." %
-                                  provider.name)
+                        log.debug(f"Skipping cover art provider {provider.name} ...")
                 except BaseException:
                     log.error(traceback.format_exc())
                     raise

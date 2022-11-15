@@ -50,9 +50,7 @@ try:
 except ImportError:
     def markdown(text):
         # Simple fallback, just make sure line breaks are applied
-        if not text:
-            return ''
-        return text.strip().replace('\n', '<br>\n')
+        return text.strip().replace('\n', '<br>\n') if text else ''
 
 _PLUGIN_MODULE_PREFIX = "picard.plugins."
 _PLUGIN_MODULE_PREFIX_LEN = len(_PLUGIN_MODULE_PREFIX)
@@ -167,10 +165,7 @@ class PluginWrapper(PluginShared):
 
     @property
     def file(self):
-        if not self._file:
-            return self.module.__file__
-        else:
-            return self._file
+        return self._file or self.module.__file__
 
     @property
     def license(self):

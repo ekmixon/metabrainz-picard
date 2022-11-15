@@ -85,7 +85,7 @@ from picard.ui.item import FileListItem
 class TagGenreFilter:
 
     def __init__(self, filters):
-        self.errors = dict()
+        self.errors = {}
         self.match_regexes = defaultdict(list)
         for lineno, line in enumerate(filters.splitlines()):
             line = line.strip()
@@ -107,10 +107,7 @@ class TagGenreFilter:
         for regex in self.match_regexes['+']:
             if regex.search(tag):
                 return False
-        for regex in self.match_regexes['-']:
-            if regex.search(tag):
-                return True
-        return False
+        return any(regex.search(tag) for regex in self.match_regexes['-'])
 
     def filter(self, counter):
         for name, count in counter:
@@ -245,8 +242,13 @@ class Track(DataObject, FileListItem):
     def column(self, column):
         m = self.metadata
         if column == 'title':
-            prefix = "%s-" % m['discnumber'] if m['discnumber'] and m['totaldiscs'] != "1" else ""
-            return "%s%s  %s" % (prefix, m['tracknumber'].zfill(2), m['title'])
+            prefix = (
+                f"{m['discnumber']}-"
+                if m['discnumber'] and m['totaldiscs'] != "1"
+                else ""
+            )
+
+            return f"{prefix}{m['tracknumber'].zfill(2)}  {m['title']}"
         elif column == 'covercount':
             return self.cover_art_description()
         elif column in m:
@@ -271,12 +273,14 @@ class Track(DataObject, FileListItem):
 
     def ignored_for_completeness(self):
         config = get_config()
-        if (config.setting['completeness_ignore_videos'] and self.is_video()) \
-                or (config.setting['completeness_ignore_pregap'] and self.is_pregap()) \
-                or (config.setting['completeness_ignore_data'] and self.is_data()) \
-                or (config.setting['completeness_ignore_silence'] and self.is_silence()):
-            return True
-        return False
+        return bool(
+            (config.setting['completeness_ignore_videos'] and self.is_video())
+            or (config.setting['completeness_ignore_pregap'] and self.is_pregap())
+            or (config.setting['completeness_ignore_data'] and self.is_data())
+            or (
+                config.setting['completeness_ignore_silence'] and self.is_silence()
+            )
+        )
 
     def append_track_artist(self, ta_id):
         """Append artist id to the list of track artists
@@ -331,10 +335,7 @@ class Track(DataObject, FileListItem):
         genres_list.sort()
 
         # And generate the genre metadata tag
-        if join_with:
-            return [join_with.join(genres_list)]
-        else:
-            return genres_list
+        return [join_with.join(genres_list)] if join_with else genres_list
 
     def _convert_folksonomy_tags_to_genre(self):
         config = get_config()
@@ -374,10 +375,7 @@ class NonAlbumTrack(Track):
 
     def column(self, column):
         if column == "title":
-            if self.status is not None:
-                return self.status
-            else:
-                return self.metadata['title']
+            return self.status if self.status is not None else self.metadata['title']
         return super().column(column)
 
     def load(self, priority=False, refresh=False):

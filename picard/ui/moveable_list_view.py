@@ -45,8 +45,7 @@ class MoveableListView:
     def move_item(self, offset):
         current_index = self.list_widget.currentRow()
         offset_index = current_index - offset
-        offset_item = self.list_widget.item(offset_index)
-        if offset_item:
+        if offset_item := self.list_widget.item(offset_index):
             current_item = self.list_widget.takeItem(current_index)
             self.list_widget.insertItem(offset_index, current_item)
             self.list_widget.setCurrentItem(current_item)

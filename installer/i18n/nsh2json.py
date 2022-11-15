@@ -33,8 +33,7 @@ def language_from_filename(path):
 
 def extract_strings(f):
     for line in f:
-        parsed = nsh.parse_langstring(line)
-        if parsed:
+        if parsed := nsh.parse_langstring(line):
             yield parsed
 
 
@@ -51,10 +50,7 @@ def main():
         target_file = os.path.join(sourcesdir, f'{language_code}.json')
         print(f'{path} => {target_file}')
         with open(path, 'r', encoding='utf-8') as infile:
-            output = {}
-            for identifier, text in extract_strings(infile):
-                output[identifier] = text
-
+            output = dict(extract_strings(infile))
             with open(target_file, 'w+', encoding='utf-8') as outfile:
                 outfile.write(json.dumps(output, ensure_ascii=False, indent=4))
 

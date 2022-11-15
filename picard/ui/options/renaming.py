@@ -288,9 +288,8 @@ class RenamingOptionsPage(OptionsPage):
             parser.eval(self.script_text)
         except Exception as e:
             raise ScriptCheckError("", str(e))
-        if self.ui.rename_files.isChecked():
-            if not self.script_text.strip():
-                raise ScriptCheckError("", _("The file naming format must not be empty."))
+        if self.ui.rename_files.isChecked() and not self.script_text.strip():
+            raise ScriptCheckError("", _("The file naming format must not be empty."))
 
     def save(self):
         config = get_config()
@@ -314,8 +313,9 @@ class RenamingOptionsPage(OptionsPage):
             super().display_error(error)
 
     def move_files_to_browse(self):
-        path = QtWidgets.QFileDialog.getExistingDirectory(self, "", self.ui.move_files_to.text())
-        if path:
+        if path := QtWidgets.QFileDialog.getExistingDirectory(
+            self, "", self.ui.move_files_to.text()
+        ):
             path = os.path.normpath(path)
             self.ui.move_files_to.setText(path)
 

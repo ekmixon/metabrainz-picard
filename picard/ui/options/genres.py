@@ -173,10 +173,7 @@ class GenresOptionsPage(OptionsPage):
             line = line.strip()
             fmt = self.fmt_clear
             if line:
-                if tagfilter.skip(line):
-                    fmt = self.fmt_skip
-                else:
-                    fmt = self.fmt_keep
+                fmt = self.fmt_skip if tagfilter.skip(line) else self.fmt_keep
             set_line_fmt(lineno, fmt)
 
 

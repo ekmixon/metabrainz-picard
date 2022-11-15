@@ -40,7 +40,7 @@ class CollectionMenu(QtWidgets.QMenu):
 
     def __init__(self, albums, *args):
         super().__init__(*args)
-        self.ids = set(a.id for a in albums)
+        self.ids = {a.id for a in albums}
         self._ignore_update = False
         self.update_collections()
 
@@ -157,8 +157,7 @@ class CollectionCheckBox(QtWidgets.QCheckBox):
         ids = self.menu.ids
         if ids & self.collection.pending:
             return
-        diff = ids - self.collection.releases
-        if diff:
+        if diff := ids - self.collection.releases:
             self.collection.add_releases(diff, self.updateText)
             self.setCheckState(QtCore.Qt.CheckState.Checked)
         else:

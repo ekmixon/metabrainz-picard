@@ -119,7 +119,13 @@ class AcoustIDClient(QtCore.QObject):
                                 recording_list.append(parsed_recording)
 
                     if results:
-                        if not recording_list:
+                        if recording_list:
+                            log.debug(
+                                "AcoustID: Lookup successful for '%s' (recordings: %d)",
+                                task.file.filename,
+                                len(recording_list)
+                            )
+                        else:
                             # Set AcoustID in tags if there was no matching recording
                             task.file.metadata['acoustid_id'] = results[0]['id']
                             task.file.update()
@@ -127,12 +133,6 @@ class AcoustIDClient(QtCore.QObject):
                                 "AcoustID: Found no matching recordings for '%s',"
                                 " setting acoustid_id tag to %r",
                                 task.file.filename, results[0]['id']
-                            )
-                        else:
-                            log.debug(
-                                "AcoustID: Lookup successful for '%s' (recordings: %d)",
-                                task.file.filename,
-                                len(recording_list)
                             )
                 else:
                     mparms = {
@@ -193,8 +193,7 @@ class AcoustIDClient(QtCore.QObject):
 
     def _on_fpcalc_finished(self, task, exit_code, exit_status):
         process = self.sender()
-        finished = process.property('picard_finished')
-        if finished:
+        if finished := process.property('picard_finished'):
             return
         process.setProperty('picard_finished', True)
         result = None
@@ -215,7 +214,7 @@ class AcoustIDClient(QtCore.QObject):
                     exit_code,
                     exit_status,
                     process.errorString())
-        except (json.decoder.JSONDecodeError, UnicodeDecodeError, ValueError):
+        except (json.decoder.JSONDecodeError, ValueError):
             log.error("Error reading fingerprint calculator output", exc_info=True)
         finally:
             if result and result[0] == 'fingerprint':
@@ -225,8 +224,7 @@ class AcoustIDClient(QtCore.QObject):
 
     def _on_fpcalc_error(self, task, error):
         process = self.sender()
-        finished = process.property('picard_finished')
-        if finished:
+        if finished := process.property('picard_finished'):
             return
         process.setProperty('picard_finished', True)
         try:
@@ -265,9 +263,7 @@ class AcoustIDClient(QtCore.QObject):
         config = get_config()
         fingerprint = task.file.acoustid_fingerprint
         if not fingerprint and not config.setting["ignore_existing_acoustid_fingerprints"]:
-            # use cached fingerprint from file metadata
-            fingerprints = task.file.metadata.getall('acoustid_fingerprint')
-            if fingerprints:
+            if fingerprints := task.file.metadata.getall('acoustid_fingerprint'):
                 fingerprint = fingerprints[0]
                 task.file.set_acoustid_fingerprint(fingerprint)
 

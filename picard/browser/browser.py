@@ -60,7 +60,7 @@ except ImportError:
         daemon_threads = True
 
 
-SERVER_VERSION = '%s-%s/%s' % (PICARD_ORG_NAME, PICARD_APP_NAME, PICARD_VERSION_STR)
+SERVER_VERSION = f'{PICARD_ORG_NAME}-{PICARD_APP_NAME}/{PICARD_VERSION_STR}'
 RE_VALID_ORIGINS = re.compile(r'^(?:[^\.]+\.)*musicbrainz\.org$')
 
 
@@ -88,15 +88,11 @@ class BrowserIntegration(QtCore.QObject):
 
     @property
     def host_address(self):
-        if not self.server:
-            return ''
-        return self.server.server_address[0]
+        return self.server.server_address[0] if self.server else ''
 
     @property
     def port(self):
-        if not self.server:
-            return 0
-        return self.server.server_address[1]
+        return self.server.server_address[1] if self.server else 0
 
     @property
     def is_running(self):

@@ -68,7 +68,7 @@ class ConfigSection(QtCore.QObject):
         super().__init__()
         self.__qt_config = config
         self.__name = name
-        self.__prefix = self.__name + '/'
+        self.__prefix = f'{self.__name}/'
         self._memoization = defaultdict(Memovar)
 
     def key(self, name):
@@ -76,9 +76,7 @@ class ConfigSection(QtCore.QObject):
 
     def __getitem__(self, name):
         opt = Option.get(self.__name, name)
-        if opt is None:
-            return None
-        return self.value(name, opt, opt.default)
+        return None if opt is None else self.value(name, opt, opt.default)
 
     def __setitem__(self, name, value):
         key = self.key(name)
@@ -116,18 +114,17 @@ class ConfigSection(QtCore.QObject):
             key = self.key(name)
             memovar = self._memoization[key]
 
-            if memovar.dirty:
-                try:
-                    value = self.raw_value(name, qtype=option_type.qtype)
-                    value = option_type.convert(value)
-                    memovar.dirty = False
-                    memovar.value = value
-                except Exception as why:
-                    log.error('Cannot read %s value: %s', self.key(name), why, exc_info=True)
-                    value = default
-                return value
-            else:
+            if not memovar.dirty:
                 return memovar.value
+            try:
+                value = self.raw_value(name, qtype=option_type.qtype)
+                value = option_type.convert(value)
+                memovar.dirty = False
+                memovar.value = value
+            except Exception as why:
+                log.error('Cannot read %s value: %s', self.key(name), why, exc_info=True)
+                value = default
+            return value
         return default
 
 
@@ -146,7 +143,7 @@ class SettingConfigSection(ConfigSection):
         super().__init__(config, name)
         self.__qt_config = config
         self.__name = name
-        self.__prefix = self.__name + '/'
+        self.__prefix = f'{self.__name}/'
         self._memoization = defaultdict(Memovar)
         self.init_profile_options()
         self.profiles_override = None
@@ -184,9 +181,7 @@ class SettingConfigSection(ConfigSection):
                 if name in settings and settings[name] is not None:
                     return settings[name]
         opt = Option.get(self.__name, name)
-        if opt is None:
-            return None
-        return self.value(name, opt, opt.default)
+        return None if opt is None else self.value(name, opt, opt.default)
 
     def __setitem__(self, name, value):
         # Don't process settings that are not profile-specific
@@ -244,19 +239,18 @@ class Config(QtCore.QSettings):
         if 'version' not in self.application or not self.application['version']:
             TextOption("application", "version", '0.0.0dev0')
         self._version = Version.from_string(self.application["version"])
-        self._upgrade_hooks = dict()
+        self._upgrade_hooks = {}
 
     def event(self, event):
-        if event.type() == QtCore.QEvent.Type.UpdateRequest:
-            # Syncing the config file can trigger a deadlock between QSettings internal mutex and
-            # the Python GIL in PyQt up to 5.15.2. Workaround this by handling this ourselves
-            # with custom file locking.
-            # See also https: // tickets.metabrainz.org/browse/PICARD-2088
-            log.debug('Config file update requested on thread %r', threading.get_ident())
-            self.sync()
-            return True
-        else:
+        if event.type() != QtCore.QEvent.Type.UpdateRequest:
             return super().event(event)
+        # Syncing the config file can trigger a deadlock between QSettings internal mutex and
+        # the Python GIL in PyQt up to 5.15.2. Workaround this by handling this ourselves
+        # with custom file locking.
+        # See also https: // tickets.metabrainz.org/browse/PICARD-2088
+        log.debug('Config file update requested on thread %r', threading.get_ident())
+        self.sync()
+        return True
 
     def sync(self):
         # Custom file locking for save multi process syncing of the config file. This is needed
@@ -267,7 +261,7 @@ class Config(QtCore.QSettings):
     def get_lockfile_name(self):
         filename = self.fileName()
         directory = os.path.dirname(filename)
-        filename = '.' + os.path.basename(filename) + '.synclock'
+        filename = f'.{os.path.basename(filename)}.synclock'
         return os.path.join(directory, filename)
 
     @classmethod
@@ -338,10 +332,10 @@ class Config(QtCore.QSettings):
             if self._version < version:
                 try:
                     if outputfunc and hook['func'].__doc__:
-                        outputfunc("Config upgrade %s -> %s: %s" % (
-                                   self._version.to_string(),
-                                   version.to_string(),
-                                   hook['func'].__doc__.strip()))
+                        outputfunc(
+                            f"Config upgrade {self._version.to_string()} -> {version.to_string()}: {hook['func'].__doc__.strip()}"
+                        )
+
                     hook['func'](self, *hook['args'])
                 except BaseException:
                     import traceback

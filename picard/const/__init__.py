@@ -67,29 +67,33 @@ CAA_PORT = 443
 
 # Prepare documentation URLs
 if PICARD_VERSION.identifier == 'final':
-    DOCS_VERSION = "v{}.{}/".format(PICARD_VERSION.major, PICARD_VERSION.minor)
+    DOCS_VERSION = f"v{PICARD_VERSION.major}.{PICARD_VERSION.minor}/"
 else:
     DOCS_VERSION = ""  # points to latest version
 DOCS_LANGUAGE = 'en'
-DOCS_BASE_URL = "https://picard-docs.musicbrainz.org/" + DOCS_VERSION + DOCS_LANGUAGE
+DOCS_BASE_URL = (
+    f"https://picard-docs.musicbrainz.org/{DOCS_VERSION}{DOCS_LANGUAGE}"
+)
+
 
 # URLs
 PICARD_URLS = {
-    'home':                    "https://picard.musicbrainz.org/",
-    'documentation':           DOCS_BASE_URL + '/',
-    'troubleshooting':         DOCS_BASE_URL + '/troubleshooting/troubleshooting.html',
-    'doc_options':             DOCS_BASE_URL + '/config/configuration.html',
-    'doc_scripting':           DOCS_BASE_URL + '/extending/scripting.html',
-    'doc_tags_from_filenames': DOCS_BASE_URL + '/usage/tags_from_file_names.html',
-    'doc_naming_script_edit':  DOCS_BASE_URL + '/config/options_filerenaming_editor.html',
-    'doc_cover_art_types':     "https://musicbrainz.org/doc/Cover_Art/Types",
-    'plugins':                 "https://picard.musicbrainz.org/plugins/",
-    'forum':                   "https://community.metabrainz.org/c/picard",
-    'donate':                  "https://metabrainz.org/donate",
-    'chromaprint':             "https://acoustid.org/chromaprint#download",
-    'acoustid_apikey':         "https://acoustid.org/api-key",
-    'acoustid_track':          "https://acoustid.org/track/",
+    'home': "https://picard.musicbrainz.org/",
+    'documentation': f'{DOCS_BASE_URL}/',
+    'troubleshooting': f'{DOCS_BASE_URL}/troubleshooting/troubleshooting.html',
+    'doc_options': f'{DOCS_BASE_URL}/config/configuration.html',
+    'doc_scripting': f'{DOCS_BASE_URL}/extending/scripting.html',
+    'doc_tags_from_filenames': f'{DOCS_BASE_URL}/usage/tags_from_file_names.html',
+    'doc_naming_script_edit': f'{DOCS_BASE_URL}/config/options_filerenaming_editor.html',
+    'doc_cover_art_types': "https://musicbrainz.org/doc/Cover_Art/Types",
+    'plugins': "https://picard.musicbrainz.org/plugins/",
+    'forum': "https://community.metabrainz.org/c/picard",
+    'donate': "https://metabrainz.org/donate",
+    'chromaprint': "https://acoustid.org/chromaprint#download",
+    'acoustid_apikey': "https://acoustid.org/api-key",
+    'acoustid_track': "https://acoustid.org/track/",
 }
+
 
 # Various Artists MBID
 VARIOUS_ARTISTS_ID = '89ad4ac3-39f7-470e-963a-56509c546377'

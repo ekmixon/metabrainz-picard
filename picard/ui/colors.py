@@ -59,7 +59,7 @@ class DefaultColor:
 
 
 def register_color(themes, name, value):
-    description = _COLOR_DESCRIPTIONS.get(name, "FIXME: color desc for %s" % name)
+    description = _COLOR_DESCRIPTIONS.get(name, f"FIXME: color desc for {name}")
     for theme_name in themes:
         _DEFAULT_COLORS[theme_name][name] = DefaultColor(value, description)
 
@@ -90,27 +90,18 @@ class InterfaceColors:
 
     @property
     def dark_theme(self):
-        if self._dark_theme is None:
-            return theme.is_dark_theme
-        else:
-            return self._dark_theme
+        return theme.is_dark_theme if self._dark_theme is None else self._dark_theme
 
     @property
     def default_colors(self):
-        if self.dark_theme:
-            return _DEFAULT_COLORS['dark']
-        else:
-            return _DEFAULT_COLORS['light']
+        return _DEFAULT_COLORS['dark'] if self.dark_theme else _DEFAULT_COLORS['light']
 
     @property
     def _config_key(self):
-        if self.dark_theme:
-            return 'interface_colors_dark'
-        else:
-            return 'interface_colors'
+        return 'interface_colors_dark' if self.dark_theme else 'interface_colors'
 
     def set_default_colors(self):
-        self._colors = dict()
+        self._colors = {}
         for color_key in self.default_colors:
             color_value = self.default_colors[color_key].value
             self.set_color(color_key, color_value)
@@ -136,7 +127,7 @@ class InterfaceColors:
         except KeyError:
             if color_key in self.default_colors:
                 return self.default_colors[color_key].value
-            raise UnknownColorException("Unknown color key: %s" % color_key)
+            raise UnknownColorException(f"Unknown color key: {color_key}")
 
     def get_qcolor(self, color_key):
         return QtGui.QColor(self.get_color(color_key))
@@ -145,13 +136,12 @@ class InterfaceColors:
         return _(self.default_colors[color_key].description)
 
     def set_color(self, color_key, color_value):
-        if color_key in self.default_colors:
-            qcolor = QtGui.QColor(color_value)
-            if not qcolor.isValid():
-                qcolor = QtGui.QColor(self.default_colors[color_key].value)
-            self._colors[color_key] = qcolor.name()
-        else:
-            raise UnknownColorException("Unknown color key: %s" % color_key)
+        if color_key not in self.default_colors:
+            raise UnknownColorException(f"Unknown color key: {color_key}")
+        qcolor = QtGui.QColor(color_value)
+        if not qcolor.isValid():
+            qcolor = QtGui.QColor(self.default_colors[color_key].value)
+        self._colors[color_key] = qcolor.name()
 
     def save_to_config(self):
         # returns True if user has to be warned about color changes

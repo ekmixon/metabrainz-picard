@@ -184,10 +184,9 @@ class ScriptingOptionsPage(OptionsPage):
             return
 
         item = items[0]
-        script_text = item.script
-        script_title = item.name if item.name.strip() else _("Unnamed Script")
+        if script_text := item.script:
+            script_title = item.name if item.name.strip() else _("Unnamed Script")
 
-        if script_text:
             script_item = TaggingScript(title=script_title, script=script_text)
             try:
                 script_item.export_script(parent=self)
@@ -199,8 +198,7 @@ class ScriptingOptionsPage(OptionsPage):
             self.ui.script_list.add_script()
 
     def script_selected(self):
-        items = self.ui.script_list.selectedItems()
-        if items:
+        if items := self.ui.script_list.selectedItems():
             item = items[0]
             self.ui.tagger_script.setEnabled(True)
             self.ui.tagger_script.setText(item.script)
@@ -255,13 +253,14 @@ class ScriptingOptionsPage(OptionsPage):
 
         # Select the last selected script item
         last_selected_script_pos = config.persist["last_selected_script_pos"]
-        last_selected_script = self.ui.script_list.item(last_selected_script_pos)
-        if last_selected_script:
+        if last_selected_script := self.ui.script_list.item(
+            last_selected_script_pos
+        ):
             self.ui.script_list.setCurrentItem(last_selected_script)
             last_selected_script.setSelected(True)
 
     def _all_scripts(self):
-        for row in range(0, self.ui.script_list.count()):
+        for row in range(self.ui.script_list.count()):
             item = self.ui.script_list.item(row)
             yield item.get_all()
 

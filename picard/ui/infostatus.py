@@ -164,9 +164,6 @@ class InfoStatus(QtWidgets.QWidget, Ui_InfoStatus):
         self.val4.setText(str(num))
 
     def set_pending_requests(self, num):
-        if num <= 0:
-            enabled = QtGui.QIcon.Mode.Disabled
-        else:
-            enabled = QtGui.QIcon.Mode.Normal
+        enabled = QtGui.QIcon.Mode.Disabled if num <= 0 else QtGui.QIcon.Mode.Normal
         self.label5.setPixmap(self.icon_download.pixmap(self._size, enabled))
         self.val5.setText(str(num))

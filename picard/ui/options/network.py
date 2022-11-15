@@ -98,7 +98,7 @@ class NetworkOptionsPage(OptionsPage):
         config.setting["browser_integration"] = self.ui.browser_integration.isChecked()
         config.setting["browser_integration_port"] = self.ui.browser_integration_port.value()
         config.setting["browser_integration_localhost_only"] = \
-            self.ui.browser_integration_localhost_only.isChecked()
+                self.ui.browser_integration_localhost_only.isChecked()
         self.tagger.update_browser_integration()
 
 

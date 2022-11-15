@@ -120,17 +120,20 @@ class InfoDialog(PicardDialog):
         self.ui = Ui_InfoDialog()
         self.display_existing_artwork = False
 
-        if (isinstance(obj, File)
+        if (
+            (
+                isinstance(obj, File)
                 and isinstance(obj.parent, Track)
                 or isinstance(obj, Track)
-                or (isinstance(obj, Album) and obj.get_num_total_files() > 0)):
-            # Display existing artwork only if selected object is track object
-            # or linked to a track object or it's an album with files
-            if (getattr(obj, 'orig_metadata', None) is not None
-                    and obj.orig_metadata.images
-                    and obj.orig_metadata.images != obj.metadata.images):
-                self.display_existing_artwork = True
-                self.existing_images = obj.orig_metadata.images
+                or (isinstance(obj, Album) and obj.get_num_total_files() > 0)
+            )
+        ) and (
+            getattr(obj, 'orig_metadata', None) is not None
+            and obj.orig_metadata.images
+            and obj.orig_metadata.images != obj.metadata.images
+        ):
+            self.display_existing_artwork = True
+            self.existing_images = obj.orig_metadata.images
 
         if obj.metadata.images:
             self.images = obj.metadata.images
@@ -170,7 +173,7 @@ class InfoDialog(PicardDialog):
             color = interface_colors.get_color("log_error")
             text = '<br />'.join(map(
                 lambda s: '<font color="%s">%s</font>' % (color, text_as_html(s)), errors))
-            self.ui.error.setText(text + '<hr />')
+            self.ui.error.setText(f'{text}<hr />')
 
     def _display_artwork(self, images, col):
         """Draw artwork in corresponding cell if image type matches type in Type column.
@@ -217,9 +220,10 @@ class InfoDialog(PicardDialog):
             infos = []
             if image.comment:
                 infos.append(image.comment)
-            infos.append("%s (%s)" %
-                         (bytes2human.decimal(image.datalength),
-                          bytes2human.binary(image.datalength)))
+            infos.append(
+                f"{bytes2human.decimal(image.datalength)} ({bytes2human.binary(image.datalength)})"
+            )
+
             if image.width and image.height:
                 infos.append("%d x %d" % (image.width, image.height))
             infos.append(image.mimetype)
@@ -269,29 +273,27 @@ class InfoDialog(PicardDialog):
         # Check if this function isn't triggered by cell in Type column
         if isinstance(data, str):
             return
-        filename = data.tempfile_filename
-        if filename:
+        if filename := data.tempfile_filename:
             url = QtCore.QUrl.fromLocalFile(filename)
             QtGui.QDesktopServices.openUrl(url)
 
 
 def format_file_info(file_):
-    info = []
-    info.append((_('Filename:'), file_.filename))
+    info = [(_('Filename:'), file_.filename)]
     if '~format' in file_.orig_metadata:
         info.append((_('Format:'), file_.orig_metadata['~format']))
     try:
         size = os.path.getsize(encode_filename(file_.filename))
-        sizestr = "%s (%s)" % (bytes2human.decimal(size), bytes2human.binary(size))
+        sizestr = f"{bytes2human.decimal(size)} ({bytes2human.binary(size)})"
         info.append((_('Size:'), sizestr))
     except BaseException:
         pass
     if file_.orig_metadata.length:
         info.append((_('Length:'), format_time(file_.orig_metadata.length)))
     if '~bitrate' in file_.orig_metadata:
-        info.append((_('Bitrate:'), '%s kbps' % file_.orig_metadata['~bitrate']))
+        info.append((_('Bitrate:'), f"{file_.orig_metadata['~bitrate']} kbps"))
     if '~sample_rate' in file_.orig_metadata:
-        info.append((_('Sample rate:'), '%s Hz' % file_.orig_metadata['~sample_rate']))
+        info.append((_('Sample rate:'), f"{file_.orig_metadata['~sample_rate']} Hz"))
     if '~bits_per_sample' in file_.orig_metadata:
         info.append((_('Bits per sample:'), str(file_.orig_metadata['~bits_per_sample'])))
     if '~channels' in file_.orig_metadata:
@@ -301,14 +303,18 @@ def format_file_info(file_):
         elif ch == '2':
             ch = _('Stereo')
         info.append((_('Channels:'), ch))
-    return '<br/>'.join(map(lambda i: '<b>%s</b> %s' %
-                            (escape(i[0]), escape(i[1])), info))
+    return '<br/>'.join(
+        map(lambda i: f'<b>{escape(i[0])}</b> {escape(i[1])}', info)
+    )
 
 
 def format_tracklist(cluster):
     info = []
-    info.append("<b>%s</b> %s" % (_('Album:'), escape(cluster.metadata["album"])))
-    info.append("<b>%s</b> %s" % (_('Artist:'), escape(cluster.metadata["albumartist"])))
+    info.append(f"""<b>{_('Album:')}</b> {escape(cluster.metadata["album"])}""")
+    info.append(
+        f"""<b>{_('Artist:')}</b> {escape(cluster.metadata["albumartist"])}"""
+    )
+
     info.append("")
     TrackListItem = namedtuple('TrackListItem', 'number, title, artist, length')
     tracklists = defaultdict(list)
@@ -330,7 +336,7 @@ def format_tracklist(cluster):
             try:
                 # This allows to parse values like '3' but also '3/10'
                 m = re.search(r'^\d+', track.number)
-                return int(m.group(0))
+                return int(m[0])
             except AttributeError:
                 return 0
 
@@ -338,10 +344,12 @@ def format_tracklist(cluster):
     for discnumber in sorted(tracklists):
         tracklist = tracklists[discnumber]
         if ndiscs > 1:
-            info.append("<b>%s</b>" % (_('Disc %d') % discnumber))
+            info.append(f"<b>{_('Disc %d') % discnumber}</b>")
         lines = ["%s %s - %s (%s)" % item for item in sorted(tracklist, key=sorttracknum)]
-        info.append("<b>%s</b><br />%s<br />" % (_('Tracklist:'),
-                    '<br />'.join(escape(s).replace(' ', '&nbsp;') for s in lines)))
+        info.append(
+            f"<b>{_('Tracklist:')}</b><br />{'<br />'.join(escape(s).replace(' ', '&nbsp;') for s in lines)}<br />"
+        )
+
     return '<br/>'.join(info)
 
 

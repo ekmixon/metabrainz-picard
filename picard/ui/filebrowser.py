@@ -60,8 +60,7 @@ def _macos_find_root_volume():
 
 def _macos_extend_root_volume_path(path):
     if not path.startswith('/Volumes/'):
-        root_volume = _macos_find_root_volume()
-        if root_volume:
+        if root_volume := _macos_find_root_volume():
             if path.startswith('/'):
                 path = path[1:]
             path = os.path.join(root_volume, path)
@@ -125,7 +124,7 @@ class FileBrowser(QtWidgets.QTreeView):
         self._set_model_filter()
         filters = []
         for exts, name in supported_formats():
-            filters.extend("*" + e for e in exts)
+            filters.extend(f"*{e}" for e in exts)
         model.setNameFilters(filters)
         # Hide unsupported files completely
         model.setNameFilterDisables(False)
@@ -192,8 +191,7 @@ class FileBrowser(QtWidgets.QTreeView):
         self._set_model_filter()
 
     def save_state(self):
-        indexes = self.selectedIndexes()
-        if indexes:
+        if indexes := self.selectedIndexes():
             path = self.model().filePath(indexes[0])
             config = get_config()
             config.persist["current_browser_path"] = os.path.normpath(path)
@@ -232,7 +230,7 @@ class FileBrowser(QtWidgets.QTreeView):
         indexes = self.selectedIndexes()
         if not indexes:
             return
-        paths = set(self.model().filePath(index) for index in indexes)
+        paths = {self.model().filePath(index) for index in indexes}
         QtCore.QObject.tagger.add_paths(paths)
 
     def move_files_here(self):
@@ -244,8 +242,7 @@ class FileBrowser(QtWidgets.QTreeView):
         config.setting["move_files_to"] = self._get_destination_from_path(path)
 
     def set_as_starting_directory(self):
-        indexes = self.selectedIndexes()
-        if indexes:
+        if indexes := self.selectedIndexes():
             config = get_config()
             path = self.model().filePath(indexes[0])
             config.setting["starting_directory_path"] = self._get_destination_from_path(path)

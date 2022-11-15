@@ -234,14 +234,15 @@ elif IS_MACOS:
         def setup(self, app):
             super().setup(app)
 
-            if self._loaded_config_theme != UiTheme.DEFAULT:
-                dark_theme = self._loaded_config_theme == UiTheme.DARK
-            else:
-                dark_theme = dark_appearance
-
             # MacOS uses a NSAppearance object to change the current application appearance
             # We call this even if UiTheme is the default, preventing MacOS from switching on-the-fly
             if OS_SUPPORTS_THEMES and AppKit:
+                dark_theme = (
+                    self._loaded_config_theme == UiTheme.DARK
+                    if self._loaded_config_theme != UiTheme.DEFAULT
+                    else dark_appearance
+                )
+
                 try:
                     if dark_theme:
                         appearance = AppKit.NSAppearance._darkAquaAppearance()

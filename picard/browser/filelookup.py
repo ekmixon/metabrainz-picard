@@ -77,12 +77,12 @@ class FileLookup(object):
         return self.launch(self._url(path, params))
 
     def launch(self, url):
-        log.debug("webbrowser2: %s" % url)
+        log.debug(f"webbrowser2: {url}")
         webbrowser2.open(url)
         return True
 
     def _lookup(self, type_, id_):
-        return self._build_launch("/%s/%s" % (type_, id_))
+        return self._build_launch(f"/{type_}/{id_}")
 
     def recording_lookup(self, recording_id):
         return self._lookup('recording', recording_id)
@@ -121,8 +121,8 @@ class FileLookup(object):
         m = self.RE_MB_ENTITY.search(string)
         if m is None:
             m = self.RE_MB_CDTOC.search(string)
-            if m is None:
-                return False
+        if m is None:
+            return False
         entity = m.group('entity')
         if entity is None:
             if type_ is None:
@@ -149,9 +149,7 @@ class FileLookup(object):
             disc = Disc(id=id)
             disc.lookup()
             return True
-        if browser_fallback:
-            return self._lookup(entity, id)
-        return False
+        return self._lookup(entity, id) if browser_fallback else False
 
     def tag_lookup(self, artist, release, track, tracknum, duration, filename):
         params = {
@@ -165,7 +163,7 @@ class FileLookup(object):
         return self._build_launch('/taglookup', params)
 
     def collection_lookup(self, userid):
-        return self._build_launch('/user/%s/collections' % userid)
+        return self._build_launch(f'/user/{userid}/collections')
 
     def search_entity(self, type_, query, adv=False, mbid_matched_callback=None, force_browser=False):
         if not force_browser and self.mbid_lookup(query, type_, mbid_matched_callback=mbid_matched_callback):

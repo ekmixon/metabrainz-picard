@@ -62,11 +62,11 @@ class TagMatchExpression:
                 tag = normalize_tagname(name)
                 self._group_map[group] = tag
                 if tag in self._numeric_tags:
-                    format_re.append(r'(?P<' + group + r'>\d+)')
+                    format_re.append(f'(?P<{group}' + r'>\d+)')
                 elif tag == 'date':
-                    format_re.append(r'(?P<' + group + r'>\d+(?:-\d+(?:-\d+)?)?)')
+                    format_re.append(f'(?P<{group}' + r'>\d+(?:-\d+(?:-\d+)?)?)')
                 else:
-                    format_re.append(r'(?P<' + group + r'>[^/]*?)')
+                    format_re.append(f'(?P<{group}>[^/]*?)')
             else:
                 format_re.append(re.escape(part))
         # Optional extension
@@ -79,21 +79,19 @@ class TagMatchExpression:
         return list(OrderedDict.fromkeys(self._group_map.values()))
 
     def match_file(self, filename):
-        match = self._format_re.search(filename.replace('\\', '/'))
-        if match:
-            result = {}
-            for group, tag in self._group_map.items():
-                value = match.group(group).strip()
-                if tag in self._numeric_tags:
-                    value = value.lstrip("0")
-                if self.replace_underscores:
-                    value = value.replace('_', ' ')
-                all_values = result.get(tag, [])
-                all_values.append(value)
-                result[tag] = all_values
-            return result
-        else:
+        if not (match := self._format_re.search(filename.replace('\\', '/'))):
             return {}
+        result = {}
+        for group, tag in self._group_map.items():
+            value = match.group(group).strip()
+            if tag in self._numeric_tags:
+                value = value.lstrip("0")
+            if self.replace_underscores:
+                value = value.replace('_', ' ')
+            all_values = result.get(tag, [])
+            all_values.append(value)
+            result[tag] = all_values
+        return result
 
 
 class TagsFromFileNamesDialog(PicardDialog):

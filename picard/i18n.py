@@ -68,7 +68,7 @@ def _try_set_locale(language):
     # Try setting the locale with different or no encoding
     for encoding in (locale.getpreferredencoding(), 'UTF-8', None):
         if encoding:
-            current_locale = locale.normalize(language + '.' + encoding)
+            current_locale = locale.normalize(f'{language}.{encoding}')
         else:
             current_locale = language
         try:
@@ -140,9 +140,6 @@ def gettext_ctxt(gettext_, message, context=None):
     if context is None:
         return gettext_(message)
 
-    msg_with_ctxt = "%s%s%s" % (context, _CONTEXT_SEPARATOR, message)
+    msg_with_ctxt = f"{context}{_CONTEXT_SEPARATOR}{message}"
     translated = gettext_(msg_with_ctxt)
-    if _CONTEXT_SEPARATOR in translated:
-        # no translation found, return original message
-        return message
-    return translated
+    return message if _CONTEXT_SEPARATOR in translated else translated

@@ -48,8 +48,7 @@ class ScriptListWidget(QtWidgets.QListWidget):
         self.bad_row = -1
 
     def contextMenuEvent(self, event):
-        item = self.itemAt(event.x(), event.y())
-        if item:
+        if item := self.itemAt(event.x(), event.y()):
             menu = QtWidgets.QMenu(self)
             rename_action = QtWidgets.QAction(_("Rename script"), self)
             rename_action.triggered.connect(partial(self.editItem, item))
@@ -80,8 +79,7 @@ class ScriptListWidget(QtWidgets.QListWidget):
             | QtCore.QItemSelectionModel.SelectionFlag.SelectCurrent)
 
     def remove_selected_script(self):
-        items = self.selectedItems()
-        if items:
+        if items := self.selectedItems():
             self.remove_script(items[0])
 
     def remove_script(self, item):
